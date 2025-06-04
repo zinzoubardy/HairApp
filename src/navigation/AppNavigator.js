@@ -3,7 +3,8 @@ import { createStackNavigator } from "@react-navigation/stack";
 import HomeScreen from "../screens/HomeScreen";
 import UploadScreen from "../screens/UploadScreen";
 import ProfileScreen from "../screens/ProfileScreen";
-import theme from "../styles/theme"; // Import theme for header styling
+import AnalysisResultScreen from "../screens/AnalysisResultScreen"; // Import the new screen
+import theme from "../styles/theme";
 
 const Stack = createStackNavigator();
 
@@ -13,9 +14,9 @@ const AppNavigator = () => {
       initialRouteName="Home"
       screenOptions={{
         headerStyle: {
-          backgroundColor: theme.colors.primary, // Example: Use primary color for header
+          backgroundColor: theme.colors.primary,
         },
-        headerTintColor: theme.colors.card, // Example: Use card color for header text/icons
+        headerTintColor: theme.colors.card,
         headerTitleStyle: {
           fontFamily: theme.fonts.title,
           fontSize: theme.fontSizes.lg,
@@ -36,6 +37,11 @@ const AppNavigator = () => {
         name="Profile"
         component={ProfileScreen}
         options={{ title: "My Profile" }}
+      />
+      <Stack.Screen
+        name="AnalysisResult"
+        component={AnalysisResultScreen}
+        options={{ title: "Analysis Result" }}
       />
     </Stack.Navigator>
   );
