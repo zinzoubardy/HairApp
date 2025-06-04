@@ -9,25 +9,28 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator // Added for loading indicator
+  ActivityIndicator
 } from "react-native";
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import theme from "../styles/theme";
+import { useAuth } from "../contexts/AuthContext"; // Import useAuth
 
-const PROFILE_DATA_KEY = '@HairNatureAI_ProfileData';
+const PROFILE_DATA_KEY = "@HairNatureAI_ProfileData";
 
 const ProfileScreen = ({ navigation }) => {
+  const { user, signOut, loadingAuthAction } = useAuth(); // Get user and signOut from context
   const [name, setName] = useState("");
   const [hairGoal, setHairGoal] = useState("");
   const [allergies, setAllergies] = useState("");
-  const [isLoading, setIsLoading] = useState(false); // For loading state
-  const [isSaving, setIsSaving] = useState(false); // For saving state
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Load profile data on component mount
   useEffect(() => {
     const loadProfileData = async () => {
       setIsLoading(true);
       try {
+        // TODO: In the future, load profile data from Supabase if user is logged in
+        // For now, continue using AsyncStorage for simplicity until profile migration
         const storedData = await AsyncStorage.getItem(PROFILE_DATA_KEY);
         if (storedData !== null) {
           const parsedData = JSON.parse(storedData);
@@ -44,7 +47,7 @@ const ProfileScreen = ({ navigation }) => {
     };
 
     loadProfileData();
-  }, []);
+  }, []); // Removed user from dependency array to keep loading from AsyncStorage for now
 
   const handleSaveProfile = async () => {
     const profileData = {
@@ -54,9 +57,9 @@ const ProfileScreen = ({ navigation }) => {
     };
     setIsSaving(true);
     try {
+      // TODO: In the future, save profile data to Supabase if user is logged in
       await AsyncStorage.setItem(PROFILE_DATA_KEY, JSON.stringify(profileData));
-      Alert.alert("Profile Saved", "Your profile has been successfully saved!");
-      console.log("Profile Data Saved:", profileData);
+      Alert.alert("Profile Saved", "Your profile has been successfully saved locally!");
     } catch (error) {
       console.error("Failed to save profile data:", error);
       Alert.alert("Error", "Could not save your profile. Please try again.");
@@ -65,9 +68,18 @@ const ProfileScreen = ({ navigation }) => {
     }
   };
 
+  const handleSignOut = async () => {
+    const { error } = await signOut();
+    if (error) {
+      Alert.alert("Sign Out Error", error.message);
+    }
+    // Navigation to AuthScreen will be handled by onAuthStateChange in AuthContext
+    // and the conditional rendering in App.tsx
+  };
+
   if (isLoading) {
     return (
-      <View style={{...styles.container, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.colors.background}}>
+      <View style={{...styles.container, justifyContent: "center", alignItems: "center", backgroundColor: theme.colors.background}}>
         <ActivityIndicator size="large" color={theme.colors.primary} />
         <Text style={{marginTop: theme.spacing.md, fontFamily: theme.fonts.body, color: theme.colors.textPrimary}}>Loading Profile...</Text>
       </View>
@@ -86,10 +98,18 @@ const ProfileScreen = ({ navigation }) => {
         <Text style={{ ...styles.title, color: theme.colors.textPrimary, fontFamily: theme.fonts.title }}>
           Your Profile
         </Text>
+
+        {user && (
+          <Text style={{...styles.emailText, fontFamily: theme.fonts.body, color: theme.colors.textSecondary}}>
+            Logged in as: {user.email}
+          </Text>
+        )}
+
         <Text style={{ ...styles.subtitle, color: theme.colors.textSecondary, fontFamily: theme.fonts.body }}>
-          Tell us a bit about yourself and your hair.
+          Tell us a bit about yourself and your hair (stored locally).
         </Text>
 
+        {/* Input fields remain the same as before */}
         <View style={styles.inputGroup}>
           <Text style={{...styles.label, fontFamily: theme.fonts.body, color: theme.colors.textPrimary}}>Name (Optional)</Text>
           <TextInput
@@ -99,10 +119,9 @@ const ProfileScreen = ({ navigation }) => {
             value={name}
             onChangeText={setName}
             returnKeyType="next"
-            editable={!isSaving}
+            editable={!isSaving && !loadingAuthAction}
           />
         </View>
-
         <View style={styles.inputGroup}>
           <Text style={{...styles.label, fontFamily: theme.fonts.body, color: theme.colors.textPrimary}}>Primary Hair Goal</Text>
           <TextInput
@@ -112,10 +131,9 @@ const ProfileScreen = ({ navigation }) => {
             value={hairGoal}
             onChangeText={setHairGoal}
             returnKeyType="next"
-            editable={!isSaving}
+            editable={!isSaving && !loadingAuthAction}
           />
         </View>
-
         <View style={styles.inputGroup}>
           <Text style={{...styles.label, fontFamily: theme.fonts.body, color: theme.colors.textPrimary}}>Known Allergies/Sensitivities</Text>
           <TextInput
@@ -127,21 +145,35 @@ const ProfileScreen = ({ navigation }) => {
             multiline
             numberOfLines={3}
             returnKeyType="done"
-            editable={!isSaving}
+            editable={!isSaving && !loadingAuthAction}
           />
         </View>
 
         <TouchableOpacity
-          style={{...styles.button, backgroundColor: isSaving ? theme.colors.border : theme.colors.primary}}
+          style={{...styles.button, backgroundColor: isSaving || loadingAuthAction ? theme.colors.border : theme.colors.primary}}
           onPress={handleSaveProfile}
-          disabled={isSaving}
+          disabled={isSaving || loadingAuthAction}
         >
           {isSaving ? (
             <ActivityIndicator size="small" color={theme.colors.textPrimary} />
           ) : (
-            <Text style={{...styles.buttonText, fontFamily: theme.fonts.body}}>Save Profile</Text>
+            <Text style={{...styles.buttonText, fontFamily: theme.fonts.body}}>Save Profile (Local)</Text>
           )}
         </TouchableOpacity>
+
+        {user && (
+          <TouchableOpacity
+            style={{...styles.button, backgroundColor: loadingAuthAction ? theme.colors.border : theme.colors.error, marginTop: theme.spacing.lg}}
+            onPress={handleSignOut}
+            disabled={loadingAuthAction}
+          >
+            {loadingAuthAction && !isSaving /* Corrected logic for sign out button loading state */ ? (
+              <ActivityIndicator size="small" color={theme.colors.card} />
+            ) : (
+              <Text style={{...styles.buttonText, fontFamily: theme.fonts.body}}>Sign Out</Text>
+            )}
+          </TouchableOpacity>
+        )}
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -161,7 +193,13 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: theme.fontSizes.md,
     textAlign: "center",
+    marginBottom: theme.spacing.md, // Adjusted margin
+  },
+  emailText: {
+    fontSize: theme.fontSizes.sm,
+    textAlign: "center",
     marginBottom: theme.spacing.xl,
+    fontStyle: "italic",
   },
   inputGroup: {
     marginBottom: theme.spacing.md,
@@ -188,7 +226,7 @@ const styles = StyleSheet.create({
     paddingVertical: theme.spacing.md,
     borderRadius: theme.borderRadius.md,
     alignItems: "center",
-    marginTop: theme.spacing.md,
+    marginTop: theme.spacing.sm, // Default margin
     minHeight: 50,
     justifyContent: "center",
   },
