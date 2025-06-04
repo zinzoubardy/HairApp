@@ -1,24 +1,11 @@
-import React from 'react';
-import {SafeAreaView, StyleSheet, Text} from 'react-native';
+import React from "react";
+import AppNavigator from "./navigation/AppNavigator"; // Corrected path relative to src
+import { NavigationContainer } from "@react-navigation/native";
 
-const App = () => {
+export default function App() {
   return (
-    <SafeAreaView style={styles.container}>
-      <Text style={styles.text}>Hello, World!</Text>
-    </SafeAreaView>
+    <NavigationContainer>
+      <AppNavigator />
+    </NavigationContainer>
   );
-};
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  text: {
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-});
-
-export default App;
+}
