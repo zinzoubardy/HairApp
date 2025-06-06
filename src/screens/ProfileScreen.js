@@ -11,58 +11,86 @@ import {
   Platform,
   ActivityIndicator
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+// AsyncStorage is no longer primarily used for profile data, but could be a fallback or for other settings.
+// import AsyncStorage from "@react-native-async-storage/async-storage";
 import theme from "../styles/theme";
-import { useAuth } from "../contexts/AuthContext"; // Import useAuth
+import { useAuth } from "../contexts/AuthContext";
+import { getProfile, updateProfile } from "../services/SupabaseService"; // Import Supabase helpers
 
-const PROFILE_DATA_KEY = "@HairNatureAI_ProfileData";
+// const PROFILE_DATA_KEY = "@HairNatureAI_ProfileData"; // Keep for potential local-only settings or fallback
 
 const ProfileScreen = ({ navigation }) => {
-  const { user, signOut, loadingAuthAction } = useAuth(); // Get user and signOut from context
+  const { user, signOut, loadingAuthAction } = useAuth();
   const [name, setName] = useState("");
   const [hairGoal, setHairGoal] = useState("");
   const [allergies, setAllergies] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+
+  const [isLoading, setIsLoading] = useState(false); // For initial data load from Supabase
+  const [isSaving, setIsSaving] = useState(false);  // For saving data to Supabase
 
   useEffect(() => {
     const loadProfileData = async () => {
+      if (!user) return; // Don't attempt to load if user is not logged in
+
       setIsLoading(true);
       try {
-        // TODO: In the future, load profile data from Supabase if user is logged in
-        // For now, continue using AsyncStorage for simplicity until profile migration
-        const storedData = await AsyncStorage.getItem(PROFILE_DATA_KEY);
-        if (storedData !== null) {
-          const parsedData = JSON.parse(storedData);
-          setName(parsedData.name || "");
-          setHairGoal(parsedData.hairGoal || "");
-          setAllergies(parsedData.allergies || "");
+        const { data: profileData, error } = await getProfile();
+        if (error) {
+          // Alert.alert("Error", "Could not load your profile data from the server.");
+          console.warn("Failed to load profile from Supabase:", error.message);
+          // Potentially fall back to AsyncStorage or inform user
         }
-      } catch (error) {
-        console.error("Failed to load profile data:", error);
-        Alert.alert("Error", "Could not load your profile data.");
+        if (profileData) {
+          setName(profileData.name || "");
+          setHairGoal(profileData.hair_goal || "");
+          setAllergies(profileData.allergies || "");
+        } else {
+          // No profile data found on server, could be a new user post-trigger or trigger failed.
+          // Initialize with empty strings or load from a local cache if desired.
+          console.log("No profile data found on server for user:", user.id);
+          setName("");
+          setHairGoal("");
+          setAllergies("");
+        }
+      } catch (e) { // Catch any other exceptions
+        console.error("Exception during loadProfileData:", e);
+        Alert.alert("Error", "An unexpected error occurred while loading your profile.");
       } finally {
         setIsLoading(false);
       }
     };
 
     loadProfileData();
-  }, []); // Removed user from dependency array to keep loading from AsyncStorage for now
+  }, [user]); // Depend on user object to re-load if user changes
 
   const handleSaveProfile = async () => {
-    const profileData = {
+    if (!user) {
+      Alert.alert("Not Logged In", "You must be logged in to save your profile.");
+      return;
+    }
+
+    const profileDetails = {
       name,
-      hairGoal,
+      hair_goal: hairGoal, // Ensure snake_case for Supabase column
       allergies,
     };
+
     setIsSaving(true);
     try {
-      // TODO: In the future, save profile data to Supabase if user is logged in
-      await AsyncStorage.setItem(PROFILE_DATA_KEY, JSON.stringify(profileData));
-      Alert.alert("Profile Saved", "Your profile has been successfully saved locally!");
-    } catch (error) {
-      console.error("Failed to save profile data:", error);
-      Alert.alert("Error", "Could not save your profile. Please try again.");
+      const { data, error } = await updateProfile(profileDetails);
+      if (error) {
+        Alert.alert("Save Error", `Could not save your profile: ${error.message}`);
+      } else {
+        Alert.alert("Profile Saved", "Your profile has been successfully saved to the server!");
+        if (data) { // Update local state with any transformations from Supabase (e.g. default values)
+            setName(data.name || "");
+            setHairGoal(data.hair_goal || "");
+            setAllergies(data.allergies || "");
+        }
+      }
+    } catch (e) { // Catch any other exceptions
+        console.error("Exception during handleSaveProfile:", e);
+        Alert.alert("Error", "An unexpected error occurred while saving your profile.");
     } finally {
       setIsSaving(false);
     }
@@ -73,15 +101,22 @@ const ProfileScreen = ({ navigation }) => {
     if (error) {
       Alert.alert("Sign Out Error", error.message);
     }
-    // Navigation to AuthScreen will be handled by onAuthStateChange in AuthContext
-    // and the conditional rendering in App.tsx
+    // Navigation to AuthScreen will be handled by onAuthStateChange
   };
 
-  if (isLoading) {
+  if (isLoading && !user) { // Show nothing or a generic loading if user isn't available yet during initial auth check
+    return (
+        <View style={{...styles.container, justifyContent: "center", alignItems: "center", backgroundColor: theme.colors.background}}>
+            <ActivityIndicator size="large" color={theme.colors.primary} />
+        </View>
+    );
+  }
+
+  if (isLoading && user) { // Show profile specific loading only when user is confirmed and we are fetching their profile
     return (
       <View style={{...styles.container, justifyContent: "center", alignItems: "center", backgroundColor: theme.colors.background}}>
         <ActivityIndicator size="large" color={theme.colors.primary} />
-        <Text style={{marginTop: theme.spacing.md, fontFamily: theme.fonts.body, color: theme.colors.textPrimary}}>Loading Profile...</Text>
+        <Text style={{marginTop: theme.spacing.md, fontFamily: theme.fonts.body, color: theme.colors.textPrimary}}>Loading Your Profile...</Text>
       </View>
     );
   }
@@ -106,10 +141,9 @@ const ProfileScreen = ({ navigation }) => {
         )}
 
         <Text style={{ ...styles.subtitle, color: theme.colors.textSecondary, fontFamily: theme.fonts.body }}>
-          Tell us a bit about yourself and your hair (stored locally).
+          Manage your hair details and preferences.
         </Text>
 
-        {/* Input fields remain the same as before */}
         <View style={styles.inputGroup}>
           <Text style={{...styles.label, fontFamily: theme.fonts.body, color: theme.colors.textPrimary}}>Name (Optional)</Text>
           <TextInput
@@ -152,12 +186,12 @@ const ProfileScreen = ({ navigation }) => {
         <TouchableOpacity
           style={{...styles.button, backgroundColor: isSaving || loadingAuthAction ? theme.colors.border : theme.colors.primary}}
           onPress={handleSaveProfile}
-          disabled={isSaving || loadingAuthAction}
+          disabled={isSaving || loadingAuthAction || !user} // Disable if not logged in
         >
           {isSaving ? (
             <ActivityIndicator size="small" color={theme.colors.textPrimary} />
           ) : (
-            <Text style={{...styles.buttonText, fontFamily: theme.fonts.body}}>Save Profile (Local)</Text>
+            <Text style={{...styles.buttonText, fontFamily: theme.fonts.body}}>Save Profile</Text>
           )}
         </TouchableOpacity>
 
@@ -167,7 +201,7 @@ const ProfileScreen = ({ navigation }) => {
             onPress={handleSignOut}
             disabled={loadingAuthAction}
           >
-            {loadingAuthAction && !isSaving /* Corrected logic for sign out button loading state */ ? (
+            {loadingAuthAction && !isSaving ? (
               <ActivityIndicator size="small" color={theme.colors.card} />
             ) : (
               <Text style={{...styles.buttonText, fontFamily: theme.fonts.body}}>Sign Out</Text>
@@ -193,7 +227,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: theme.fontSizes.md,
     textAlign: "center",
-    marginBottom: theme.spacing.md, // Adjusted margin
+    marginBottom: theme.spacing.md,
   },
   emailText: {
     fontSize: theme.fontSizes.sm,
@@ -226,7 +260,7 @@ const styles = StyleSheet.create({
     paddingVertical: theme.spacing.md,
     borderRadius: theme.borderRadius.md,
     alignItems: "center",
-    marginTop: theme.spacing.sm, // Default margin
+    marginTop: theme.spacing.sm,
     minHeight: 50,
     justifyContent: "center",
   },
