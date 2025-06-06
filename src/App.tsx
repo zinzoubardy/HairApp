@@ -1,59 +1,29 @@
 import React from "react";
-import { NavigationContainer } from "@react-navigation/native";
-import { AuthProvider, useAuth } from "./contexts/AuthContext"; // Corrected path
-import AppNavigator from "./navigation/AppNavigator";   // Corrected path
-import AuthScreen from "./screens/AuthScreen";     // Corrected path
-import { View, ActivityIndicator, Text, StyleSheet } from "react-native";
-import theme from "./styles/theme";                  // Corrected path
+import { View, Text, StyleSheet } from "react-native";
 
-// Initial loading screen component
-const InitialLoadingScreen = () => (
-  <View style={styles.loadingContainer}>
-    <ActivityIndicator size="large" color={theme.colors.primary} />
-    <Text style={styles.loadingText}>Loading Application...</Text>
-  </View>
-);
-
-// Component to decide which navigator to show
-const AppContent = () => {
-  const { session, user, loadingInitial } = useAuth();
-
-  if (loadingInitial) {
-    return <InitialLoadingScreen />;
-  }
-
-  // If session and user exist, user is logged in
-  if (session && user) {
-    return <AppNavigator />;
-  }
-
-  // Otherwise, user is not logged in, show AuthScreen
-  return <AuthScreen />;
+const App = () => {
+  return (
+    <View style={styles.container}>
+      <Text style={styles.text}>Minimal App Loaded!</Text>
+      <Text style={styles.text}>If you see this, the basic registration is working.</Text>
+      <Text style={styles.text}>The error is likely in the original App.tsx content (Navigation, Contexts, etc.).</Text>
+    </View>
+  );
 };
 
-export default function App() {
-  return (
-    // AuthProvider now wraps NavigationContainer to ensure context is available everywhere
-    // and NavigationContainer is only rendered once AuthProvider is ready (implicitly)
-    <AuthProvider>
-      <NavigationContainer>
-        <AppContent />
-      </NavigationContainer>
-    </AuthProvider>
-  );
-}
-
 const styles = StyleSheet.create({
-  loadingContainer: {
+  container: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: theme.colors.background,
+    backgroundColor: "#E0E0E0" // Using a slightly different background for clarity
   },
-  loadingText: {
-    marginTop: theme.spacing.md,
-    fontSize: theme.fontSizes.md,
-    color: theme.colors.textPrimary,
-    fontFamily: theme.fonts.body,
+  text: {
+    fontSize: 18,
+    color: "#111111", // Darker text
+    textAlign: "center",
+    marginVertical: 10
   },
 });
+
+export default App;
