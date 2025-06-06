@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { supabase } from "./SupabaseService"; // Corrected path
+import { supabase } from "../services/SupabaseService"; // Corrected path
 
 const AuthContext = createContext(null); // Initialize with null or a default shape
 
