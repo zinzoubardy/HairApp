@@ -1,28 +1,43 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { NavigationContainer } from "@react-navigation/native";
+import { AuthProvider, useAuth } from "./contexts/AuthContext"; // Corrected path if necessary
+import AppNavigator from "./navigation/AppNavigator"; // Corrected path if necessary
+import AuthScreen from "./screens/AuthScreen"; // Corrected path if necessary
+import { StatusBar } from "expo-status-bar";
+import { View, ActivityIndicator, StyleSheet } from "react-native";
+import theme from "./styles/theme"; // Assuming theme.js is in src/styles
+
+const AppContent = () => {
+  const { user, loadingInitial } = useAuth();
+
+  if (loadingInitial) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+      </View>
+    );
+  }
+
+  return user ? <AppNavigator /> : <AuthScreen />;
+};
 
 const App = () => {
   return (
-    <View style={styles.container}>
-      <Text style={styles.text}>Minimal App Loaded!</Text>
-      <Text style={styles.text}>If you see this, the basic registration is working.</Text>
-      <Text style={styles.text}>The error is likely in the original App.tsx content (Navigation, Contexts, etc.).</Text>
-    </View>
+    <NavigationContainer>
+      <AuthProvider>
+        <StatusBar style="auto" />
+        <AppContent />
+      </AuthProvider>
+    </NavigationContainer>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#E0E0E0" // Using a slightly different background for clarity
-  },
-  text: {
-    fontSize: 18,
-    color: "#111111", // Darker text
-    textAlign: "center",
-    marginVertical: 10
+    backgroundColor: theme.colors.background, // Optional: use a background color from theme
   },
 });
 
