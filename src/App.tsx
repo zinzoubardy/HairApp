@@ -1,43 +1,27 @@
-import React from "react";
-import { NavigationContainer } from "@react-navigation/native";
-import { AuthProvider, useAuth } from "./contexts/AuthContext"; // Corrected path if necessary
-import AppNavigator from "./navigation/AppNavigator"; // Corrected path if necessary
-import AuthScreen from "./screens/AuthScreen"; // Corrected path if necessary
-import { StatusBar } from "expo-status-bar";
-import { View, ActivityIndicator, StyleSheet } from "react-native";
-import theme from "./styles/theme"; // Assuming theme.js is in src/styles
-
-const AppContent = () => {
-  const { user, loadingInitial } = useAuth();
-
-  if (loadingInitial) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-      </View>
-    );
-  }
-
-  return user ? <AppNavigator /> : <AuthScreen />;
-};
+import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 
 const App = () => {
   return (
-    <NavigationContainer>
-      <AuthProvider>
-        <StatusBar style="auto" />
-        <AppContent />
-      </AuthProvider>
-    </NavigationContainer>
+    <View style={styles.container}>
+      <Text style={styles.text}>Minimal App.tsx Loaded!</Text>
+      <Text style={styles.text}>If you see this, basic registration is working.</Text>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  loadingContainer: {
+  container: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: theme.colors.background, // Optional: use a background color from theme
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#FFFFE0', // Light yellow for easy identification
+  },
+  text: {
+    fontSize: 18,
+    color: '#000000',
+    textAlign: 'center',
+    marginVertical: 10,
   },
 });
 
