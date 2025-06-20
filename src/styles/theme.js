@@ -1,26 +1,26 @@
 const theme = {
   colors: {
-    primary: "#A0522D", // Sienna (example for a soft brown)
-    secondary: "#8FBC8F", // DarkSeaGreen (example for olive)
-    background: "#F5F5DC", // Beige
-    card: "#FFFFFF",
-    textPrimary: "#36454F", // Charcoal
-    textSecondary: "#708090", // SlateGray
-    accent: "#B76E79", // Rose Gold like
-    border: "#D3D3D3", // LightGray
-    error: "#FF6347", // Tomato
-    success: "#3CB371", // MediumSeaGreen
+    primary: "#00FFFF",
+    secondary: "#FF4081",
+    background: "#121212",
+    card: "#1E1E1E",
+    textPrimary: "#E0E0E0",
+    textSecondary: "#A0A0A0",
+    accent: "#F0A500",
+    border: "#333333",
+    error: "#FF5252",
+    success: "#4CAF50",
 
-    // Specific earth tones mentioned
-    beige: "#F5F5DC",
-    olive: "#808000",
-    roseGold: "#B76E79", // More specific rose gold
-    softBrown: "#A0522D", // Sienna
+    // Specific earth tones mentioned - remove these as they are not part of the new theme
+    // beige: "#F5F5DC",
+    // olive: "#808000",
+    // roseGold: "#B76E79",
+    // softBrown: "#A0522D",
   },
   fonts: {
-    main: "System", // Default system font as a fallback
-    title: "Georgia", // Example of a modern serif
-    body: "Helvetica Neue", // Example of a smooth sans-serif
+    main: "Open Sans", // Default system font as a fallback - updated to Open Sans
+    title: "Poppins",
+    body: "Open Sans",
   },
   fontSizes: {
     xs: 12,
