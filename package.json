@@ -32,7 +32,7 @@
     "typescript": "~5.8.3"
   },
   "devDependencies": {
-    "@babel/core": "^7.20.0",
+    "@babel/core": "^7.24.0",
     "@types/styled-components-react-native": "^5.2.5",
     "react-native-svg-transformer": "^1.5.1"
   },
