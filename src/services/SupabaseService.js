@@ -110,3 +110,117 @@ export const updateProfile = async (profileData) => { // profileData should cont
     return { data: null, error: { message: e.message || "An unexpected error occurred."} };
   }
 };
+
+// --- Routine Helper Functions ---
+
+// Get all routines for the currently authenticated user
+export const getRoutines = async () => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return { data: null, error: { message: "User not authenticated." } };
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("routines")
+      .select("*") // Select all columns for routines
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false }); // Order by creation date
+
+    if (error) {
+      console.error("Error fetching routines:", error.message);
+    }
+    return { data, error };
+  } catch (e) {
+    console.error("Exception fetching routines:", e);
+    return { data: null, error: { message: e.message || "An unexpected error occurred."} };
+  }
+};
+
+// Create a new routine for the authenticated user
+export const createRoutine = async (routineData) => { // routineData: { title, description, routine_type, steps }
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return { data: null, error: { message: "User not authenticated." } };
+  }
+
+  const newRoutine = {
+    user_id: user.id,
+    ...routineData, // title, description, routine_type, steps
+  };
+
+  try {
+    const { data, error } = await supabase
+      .from("routines")
+      .insert(newRoutine)
+      .select("*") // Select all columns of the newly created routine
+      .single(); // Expect a single row back
+
+    if (error) {
+      console.error("Error creating routine:", error.message);
+    }
+    return { data, error };
+  } catch (e) {
+    console.error("Exception creating routine:", e);
+    return { data: null, error: { message: e.message || "An unexpected error occurred."} };
+  }
+};
+
+// Update an existing routine
+export const updateRoutine = async (routineId, updates) => { // updates: { title, description, routine_type, steps }
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    // Although RLS would prevent unauthorized updates, checking user upfront is good practice.
+    return { data: null, error: { message: "User not authenticated." } };
+  }
+
+  try {
+    // We don't explicitly check if the routine belongs to the user here,
+    // as RLS policies on the 'routines' table should enforce this.
+    // The .eq('user_id', user.id) in RLS policy is key.
+    const { data, error } = await supabase
+      .from("routines")
+      .update(updates)
+      .eq("id", routineId) // Specify which routine to update
+      .select("*") // Select all columns of the updated routine
+      .single(); // Expect a single row back
+
+    if (error) {
+      console.error("Error updating routine:", error.message);
+    }
+    return { data, error };
+  } catch (e) {
+    console.error("Exception updating routine:", e);
+    return { data: null, error: { message: e.message || "An unexpected error occurred."} };
+  }
+};
+
+// Delete a routine
+export const deleteRoutine = async (routineId) => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return { data: null, error: { message: "User not authenticated." } };
+  }
+
+  try {
+    // RLS policies should ensure users can only delete their own routines.
+    const { data, error } = await supabase // 'data' will be null on successful delete with no select
+      .from("routines")
+      .delete()
+      .eq("id", routineId);
+      // Removed .single() and .select() as delete might not return the record by default
+      // or it might error if select() is used and no row is found (e.g. already deleted)
+
+    if (error) {
+      console.error("Error deleting routine:", error.message);
+    }
+    // For delete, Supabase client often returns { data: null, error: null } on success
+    // or { data: null, error: SomeError } on failure.
+    // If you need to confirm a row was deleted, you might need a select before delete or check count.
+    // For simplicity, we return the direct result.
+    return { data, error };
+  } catch (e) {
+    console.error("Exception deleting routine:", e);
+    return { data: null, error: { message: e.message || "An unexpected error occurred."} };
+  }
+};
