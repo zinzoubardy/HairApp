@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Alert } from 'react-native';
-import { getAIHairstyleAdvice } from '../../services/AIService.js';
+import { getAIHairstyleAdvice } from '../services/AIService.js';
 import theme from '../../styles/theme';
 
 const HairAIScreen = () => {
