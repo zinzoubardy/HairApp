@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
   Alert,
   StatusBar,
-  Platform
+  // Platform // Commented out
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { getAIHairstyleAdvice } from '../services/AIService.js';
