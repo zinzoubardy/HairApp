@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar, Platform } from "react-native"; // Added Platform
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons'; // Using Ionicons as suggested
 import theme from "../styles/theme.js";
@@ -35,8 +35,13 @@ const HomeScreen = ({ navigation }) => {
     },
   ];
 
+  // Calculate paddingTop dynamically within the component
+  const paddingTop = Platform.OS === 'android'
+    ? StatusBar.currentHeight + theme.spacing.md
+    : theme.spacing.lg;
+
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView contentContainerStyle={[styles.container, { paddingTop }]}>
       <StatusBar barStyle="light-content" backgroundColor={theme.colors.background} />
       <View style={styles.headerContainer}>
         <Text style={styles.title}>Welcome to HairNature AI</Text>
@@ -76,7 +81,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     backgroundColor: theme.colors.background,
     paddingHorizontal: theme.spacing.md,
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight + theme.spacing.md : theme.spacing.lg, // Adjust for status bar
+    // paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight + theme.spacing.md : theme.spacing.lg, // Adjust for status bar - REMOVED
     paddingBottom: theme.spacing.lg,
   },
   headerContainer: {
