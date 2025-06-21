@@ -1,5 +1,5 @@
 import Together from "together-ai";
-import { TOGETHER_AI_API_KEY } from "../config/apiKeys";
+import { TOGETHER_AI_API_KEY } from "../config/apiKeys.js";
 
 const together = new Together({ apiKey: TOGETHER_AI_API_KEY });
 

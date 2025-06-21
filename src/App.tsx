@@ -1,11 +1,11 @@
 import React from "react";
 import { NavigationContainer } from "@react-navigation/native";
-import { AuthProvider, useAuth } from "./contexts/AuthContext";
-import AppNavigator from "./navigation/AppNavigator";
-import AuthScreen from "./screens/AuthScreen";
+import { AuthProvider, useAuth } from "./contexts/AuthContext.js";
+import AppNavigator from "./navigation/AppNavigator.js";
+import AuthScreen from "./screens/AuthScreen.js";
 import { StatusBar } from "expo-status-bar";
 import { View, ActivityIndicator, StyleSheet } from "react-native";
-import theme from "./styles/theme";
+import theme from "./styles/theme.js";
 
 const AppContent = () => {
   const { user, loadingInitial } = useAuth();
