@@ -25,7 +25,7 @@ const App = () => {
   return (
     <NavigationContainer>
       <AuthProvider>
-        <StatusBar style="auto" />
+        <StatusBar style="light" />
         <AppContent />
       </AuthProvider>
     </NavigationContainer>

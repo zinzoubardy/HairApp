@@ -1,25 +1,19 @@
 const theme = {
   colors: {
-    primary: "#00FFFF",
-    secondary: "#FF4081",
-    background: "#121212",
-    card: "#1E1E1E",
-    textPrimary: "#E0E0E0",
-    textSecondary: "#A0A0A0",
-    accent: "#F0A500",
-    border: "#333333",
-    error: "#FF5252",
-    success: "#4CAF50",
-
-    // Specific earth tones mentioned - remove these as they are not part of the new theme
-    // beige: "#F5F5DC",
-    // olive: "#808000",
-    // roseGold: "#B76E79",
-    // softBrown: "#A0522D",
+    background: "#0f0e15",
+    primary: "#6e44ff",  // Violet
+    secondary: "#00e5ff", // Teal
+    accent: "#ff2d75",   // Magenta
+    textPrimary: "#F0F0F0", // Light gray for primary text
+    textSecondary: "#A0A0A0", // Medium light gray for secondary text
+    card: "#1C1B2A", // A dark, slightly purplish gray, subtly lighter than background
+    border: "#3A3854",  // A border color that fits the scheme
+    error: "#FF5252", // Standard error red
+    success: "#4CAF50", // Standard success green
   },
   fonts: {
-    main: "Open Sans", // Default system font as a fallback - updated to Open Sans
-    title: "Poppins",
+    main: "Open Sans", // Retaining Open Sans for main/body
+    title: "Poppins-Bold",
     body: "Open Sans",
   },
   fontSizes: {

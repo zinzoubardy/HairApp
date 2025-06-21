@@ -1,46 +1,72 @@
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar } from "react-native";
+import { LinearGradient } from 'expo-linear-gradient';
+import Ionicons from 'react-native-vector-icons/Ionicons'; // Using Ionicons as suggested
 import theme from "../styles/theme.js";
-import { useAuth } from "../contexts/AuthContext.js"; // To display user email
+import { useAuth } from "../contexts/AuthContext.js";
 
 const HomeScreen = ({ navigation }) => {
-  const { user } = useAuth(); // Get user from auth context
+  const { user } = useAuth();
+
+  const features = [
+    {
+      id: "analyze",
+      title: "Analyze Hair",
+      description: "Scan your hair with AI",
+      icon: "camera-outline", // Changed from ios-scan-circle-outline for a more direct camera feel
+      screen: "Upload",
+      gradientColors: [theme.colors.primary, theme.colors.accent], // Violet to Magenta
+    },
+    {
+      id: "advisor",
+      title: "AI Hair Advisor",
+      description: "Get expert hair advice",
+      icon: "chatbubbles-outline", // Changed from ios-chatbubbles-outline
+      screen: "HairAI",
+      gradientColors: [theme.colors.secondary, theme.colors.primary], // Teal to Violet
+    },
+    {
+      id: "profile",
+      title: "My Profile",
+      description: "View & manage your profile",
+      icon: "person-circle-outline", // Changed from ios-person-circle-outline
+      screen: "Profile",
+      gradientColors: [theme.colors.accent, theme.colors.secondary], // Magenta to Teal
+    },
+  ];
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>
-        Welcome to HairNature AI
-      </Text>
-      {user && (
-        <Text style={styles.emailText}>
-          Logged in as: {user.email}
-        </Text>
-      )}
-      <Text style={styles.body}>
-        Your personal guide to natural hair health and coloring.
-      </Text>
+      <StatusBar barStyle="light-content" backgroundColor={theme.colors.background} />
+      <View style={styles.headerContainer}>
+        <Text style={styles.title}>Welcome to HairNature AI</Text>
+        {user && (
+          <Text style={styles.emailText}>
+            Logged in as: {user.email}
+          </Text>
+        )}
+      </View>
 
-      <TouchableOpacity
-        style={{ ...styles.button, backgroundColor: theme.colors.primary }}
-        onPress={() => navigation.navigate("Upload")}
-      >
-        <Text style={styles.buttonText}>Analyze Hair from Photo</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={{ ...styles.button, backgroundColor: theme.colors.secondary }}
-        onPress={() => navigation.navigate("HairAI")}
-      >
-        <Text style={styles.buttonText}>AI Hair Advisor</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={{ ...styles.button, backgroundColor: theme.colors.accent }}
-        onPress={() => navigation.navigate("Profile")}
-      >
-        <Text style={styles.buttonText}>My Profile</Text>
-      </TouchableOpacity>
-
+      <View style={styles.featureGrid}>
+        {features.map((feature) => (
+          <TouchableOpacity
+            key={feature.id}
+            style={styles.featureCard}
+            onPress={() => navigation.navigate(feature.screen)}
+          >
+            <LinearGradient
+              colors={feature.gradientColors}
+              style={styles.cardIconContainer}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <Ionicons name={feature.icon} size={styles.cardIcon.size} color={styles.cardIcon.color} />
+            </LinearGradient>
+            <Text style={styles.cardTitle}>{feature.title}</Text>
+            <Text style={styles.cardDescription}>{feature.description}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
     </ScrollView>
   );
 };
@@ -48,49 +74,73 @@ const HomeScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: theme.spacing.md,
-    backgroundColor: theme.colors.background, // Added background color
+    backgroundColor: theme.colors.background,
+    paddingHorizontal: theme.spacing.md,
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight + theme.spacing.md : theme.spacing.lg, // Adjust for status bar
+    paddingBottom: theme.spacing.lg,
+  },
+  headerContainer: {
+    marginBottom: theme.spacing.lg,
+    alignItems: 'center',
   },
   title: {
-    fontSize: theme.fontSizes.title,
+    color: theme.colors.textPrimary,
+    fontFamily: theme.fonts.title,
+    fontSize: theme.fontSizes.xxl, // Larger title
+    textAlign: 'center',
     marginBottom: theme.spacing.sm,
-    textAlign: "center",
-    color: theme.colors.textPrimary, // Added text color
-    fontFamily: theme.fonts.title, // Added font family
   },
   emailText: {
+    color: theme.colors.textSecondary,
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSizes.sm,
-    textAlign: "center",
+    textAlign: 'center',
+  },
+  featureGrid: {
+    // Using column layout for simplicity, cards will stack vertically
+  },
+  featureCard: {
+    backgroundColor: theme.colors.card,
+    borderRadius: theme.borderRadius.lg,
+    padding: theme.spacing.lg, // Increased padding for a more spacious feel
+    marginVertical: theme.spacing.md, // Adjusted margin for vertical stacking
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    // Adding subtle shadow as suggested
+    shadowColor: theme.colors.primary, // Using primary color for shadow
+    shadowOffset: { width: 0, height: 4 }, // Increased shadow offset
+    shadowOpacity: 0.3, // Slightly more pronounced shadow
+    shadowRadius: 5, // Increased shadow radius
+    elevation: 8, // Increased elevation for Android
+  },
+  cardIconContainer: {
+    padding: theme.spacing.md,
+    borderRadius: theme.borderRadius.md, // Rounded corners for the gradient bg
     marginBottom: theme.spacing.md,
-    fontStyle: "italic",
-    color: theme.colors.textSecondary, // Added text color
-    fontFamily: theme.fonts.body, // Added font family
+    // Making it a circle
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  body: {
-    fontSize: theme.fontSizes.md,
-    textAlign: "center",
-    marginBottom: theme.spacing.lg,
-    color: theme.colors.textSecondary, // Added text color
-    fontFamily: theme.fonts.body, // Added font family
+  cardIcon: { // This is now an object to hold size and color, not a direct style
+    size: 40,
+    color: theme.colors.card, // Icon color contrast with gradient
   },
-  button: {
-    paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
-    marginVertical: theme.spacing.sm,
-    width: "90%",
-    minHeight: 50,
-    alignItems: "center",
-    justifyContent: "center",
+  cardTitle: {
+    color: theme.colors.textPrimary,
+    fontFamily: theme.fonts.title,
+    fontSize: theme.fontSizes.lg, // Using lg for card titles
+    textAlign: 'center',
+    marginBottom: theme.spacing.xs,
   },
-  buttonText: {
-    color: theme.colors.background, // Changed to background color for high contrast
-    fontSize: theme.fontSizes.md,
-    fontWeight: "bold",
-    textAlign: "center",
-    fontFamily: theme.fonts.body, // Added font family
+  cardDescription: {
+    color: theme.colors.textSecondary,
+    fontFamily: theme.fonts.body,
+    fontSize: theme.fontSizes.sm, // Smaller size for description
+    textAlign: 'center',
   },
 });
 
