@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { getAIHairstyleAdvice } from '../services/AIService.js';
-import theme from '../../styles/theme';
+import theme from '../styles/theme.js';
 
 const HairAIScreen = () => {
   const [prompt, setPrompt] = useState('');

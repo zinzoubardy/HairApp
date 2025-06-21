@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from "react-native";
-import theme from "../styles/theme";
-import { useAuth } from "../contexts/AuthContext"; // To display user email
+import theme from "../styles/theme.js";
+import { useAuth } from "../contexts/AuthContext.js"; // To display user email
 
 const HomeScreen = ({ navigation }) => {
   const { user } = useAuth(); // Get user from auth context
