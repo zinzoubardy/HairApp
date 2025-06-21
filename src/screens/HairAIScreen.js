@@ -105,7 +105,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     backgroundColor: theme.colors.background,
     paddingHorizontal: theme.spacing.md,
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight + theme.spacing.md : theme.spacing.lg,
+    paddingTop: theme.spacing.lg,
     paddingBottom: theme.spacing.lg,
   },
   title: {
