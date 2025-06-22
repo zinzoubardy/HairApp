@@ -15,7 +15,7 @@ const Container = styled.View`
 const HeaderText = styled.Text`
   font-size: ${props => props.theme.typography.h1.fontSize}px;
   font-weight: ${props => props.theme.typography.h1.fontWeight};
-  color: ${props => props.theme.colors.text};
+  color: ${props => props.theme.colors.textPrimary};
   margin-bottom: ${props => props.theme.spacing.lg}px;
   text-align: center;
 `;
@@ -38,7 +38,7 @@ const RoutineTitle = styled.Text`
 
 const RoutineDescription = styled.Text`
   font-size: ${props => props.theme.typography.body.fontSize}px;
-  color: ${props => props.theme.colors.text};
+  color: ${props => props.theme.colors.textPrimary};
   margin-bottom: ${props => props.theme.spacing.sm}px;
 `;
 

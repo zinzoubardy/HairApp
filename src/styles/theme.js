@@ -7,9 +7,12 @@ const theme = {
     textPrimary: "#F0F0F0", // Light gray for primary text
     textSecondary: "#A0A0A0", // Medium light gray for secondary text
     card: "#1C1B2A", // A dark, slightly purplish gray, subtly lighter than background
+    surface: "#1C1B2A", // Added surface, same as card for now, can be different
+    surfaceVariant: "#232233", // Slightly different for step containers
     border: "#3A3854",  // A border color that fits the scheme
     error: "#FF5252", // Standard error red
     success: "#4CAF50", // Standard success green
+    info: "#2196F3", // Standard info blue
   },
   fonts: {
     main: "Open Sans", // Retaining Open Sans for main/body

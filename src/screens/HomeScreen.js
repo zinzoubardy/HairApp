@@ -39,7 +39,7 @@ const HomeScreen = ({ navigation }) => {
       description: "Manage your haircare routines",
       icon: "leaf-outline", // Changed to user's preference
       screen: "Routine", // Navigate to RoutineScreen
-      gradientColors: [theme.colors.info, theme.colors.success], // Example: Blue to Green
+      gradientColors: [theme.colors.primary, theme.colors.secondary], // Violet to Teal
     },
   ];
 

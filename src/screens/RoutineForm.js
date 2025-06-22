@@ -15,7 +15,7 @@ const FormContainer = styled(ScrollView)`
 const HeaderText = styled.Text`
   font-size: ${props => props.theme.typography.h1.fontSize}px;
   font-weight: ${props => props.theme.typography.h1.fontWeight};
-  color: ${props => props.theme.colors.text};
+  color: ${props => props.theme.colors.textPrimary};
   margin-bottom: ${props => props.theme.spacing.lg}px;
   text-align: center;
 `;
@@ -32,7 +32,7 @@ const StyledInput = styled.TextInput.attrs(props => ({
   placeholderTextColor: props.theme.colors.textSecondary,
 }))`
   background-color: ${props => props.theme.colors.surface};
-  color: ${props => props.theme.colors.text}; // Actual text color
+  color: ${props => props.theme.colors.textPrimary}; // Actual text color
   padding: ${props => props.theme.spacing.md}px;
   border-radius: ${props => props.theme.borderRadius.sm}px;
   border: 1px solid ${props => props.theme.colors.border};
@@ -47,7 +47,7 @@ const StyledMultilineInput = styled(StyledInput)`
 
 const StepsHeaderText = styled(InputLabel)`
   font-size: ${props => props.theme.typography.h2.fontSize}px;
-  color: ${props => props.theme.colors.text};
+  color: ${props => props.theme.colors.textPrimary};
   margin-top: ${props => props.theme.spacing.lg}px;
   margin-bottom: ${props => props.theme.spacing.sm}px;
 `;
