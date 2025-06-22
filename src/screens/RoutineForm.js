@@ -1,111 +1,114 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native'; // Added ActivityIndicator
-import styled, { ThemeProvider } from 'styled-components/native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, ActivityIndicator, StyleSheet } from 'react-native';
+import styled, { ThemeProvider } from 'styled-components/native'; // Keep ThemeProvider
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { createRoutine, updateRoutine } from '../services/SupabaseService.js';
 import theme from '../styles/theme.js';
 
-// Styled Components
-const FormContainer = styled(ScrollView)`
-  flex: 1;
-  background-color: ${props => props.theme.colors.background};
-  padding: ${props => props.theme.spacing.md}px;
-`;
+// All styled.* definitions are commented out for debugging CssSyntaxError
 
-const HeaderText = styled.Text`
-  font-size: ${props => props.theme.typography.h1.fontSize}px;
-  font-weight: ${props => props.theme.typography.h1.fontWeight};
-  color: ${props => props.theme.colors.textPrimary};
-  margin-bottom: ${props => props.theme.spacing.lg}px;
-  text-align: center;
-`;
+/*
+const FormContainer = styled(ScrollView)`...`;
+const HeaderText = styled.Text`...`;
+const InputLabel = styled.Text`...`;
+const StyledInput = styled.TextInput.attrs(...)`...`;
+const StyledMultilineInput = styled(StyledInput)`...`;
+const StepsHeaderText = styled(InputLabel)`...`;
+const StepContainer = styled.View`...`;
+const StepInput = styled(StyledInput).attrs(...)`...`;
+const StepTextArea = styled(StyledMultilineInput).attrs(...)`...`;
+const AddStepButton = styled.TouchableOpacity`...`;
+const RemoveStepButton = styled.TouchableOpacity`...`;
+const ButtonText = styled.Text`...`;
+const SaveButton = styled.TouchableOpacity`...`;
+*/
 
-const InputLabel = styled.Text`
-  font-size: ${props => props.theme.typography.label.fontSize}px;
-  color: ${props => props.theme.colors.textSecondary};
-  margin-bottom: ${props => props.theme.spacing.xs}px;
-  margin-top: ${props => props.theme.spacing.md}px;
-`;
+// Define styles inline for testing
+const styles = StyleSheet.create({
+  formContainer: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+    // padding: theme.spacing.md, // ScrollView uses contentContainerStyle for inner padding
+  },
+  formContentContainer: {
+    padding: theme.spacing.md,
+    paddingBottom: theme.spacing.xl,
+  },
+  headerText: {
+    fontSize: theme.typography.h1.fontSize,
+    fontWeight: theme.typography.h1.fontWeight,
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.lg,
+    textAlign: 'center',
+  },
+  inputLabel: {
+    fontSize: theme.typography.label.fontSize,
+    color: theme.colors.textSecondary,
+    marginBottom: theme.spacing.xs,
+    marginTop: theme.spacing.md,
+  },
+  styledInput: {
+    backgroundColor: theme.colors.surface,
+    color: theme.colors.textPrimary,
+    padding: theme.spacing.md,
+    borderRadius: theme.borderRadius.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    fontSize: theme.typography.body.fontSize,
+  },
+  styledMultilineInput: {
+    minHeight: 100,
+    textAlignVertical: 'top', // For Android
+    // Inherits other styles from styledInput if spread
+  },
+  stepsHeaderText: {
+    // Similar to inputLabel but with h2 font size and textPrimary color
+    fontSize: theme.typography.h2.fontSize,
+    color: theme.colors.textPrimary,
+    marginTop: theme.spacing.lg,
+    marginBottom: theme.spacing.sm,
+  },
+  stepContainer: {
+    backgroundColor: theme.colors.surfaceVariant,
+    padding: theme.spacing.md,
+    borderRadius: theme.borderRadius.md,
+    marginBottom: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  // StepInput and StepTextArea will use styledInput and styledMultilineInput styles
+  addStepButton: {
+    backgroundColor: theme.colors.primary,
+    padding: theme.spacing.md,
+    borderRadius: theme.borderRadius.sm,
+    alignItems: 'center',
+    marginTop: theme.spacing.sm,
+    marginBottom: theme.spacing.lg,
+  },
+  removeStepButton: {
+    backgroundColor: theme.colors.error,
+    paddingVertical: theme.spacing.xs, // Adjusted padding
+    paddingHorizontal: theme.spacing.sm, // Adjusted padding
+    borderRadius: theme.borderRadius.xs,
+    alignItems: 'center',
+    alignSelf: 'flex-end',
+    marginTop: theme.spacing.sm,
+  },
+  buttonText: {
+    color: '#ffffff',
+    fontSize: theme.typography.button.fontSize,
+    fontWeight: theme.typography.button.fontWeight,
+  },
+  saveButton: {
+    backgroundColor: theme.colors.accent,
+    padding: theme.spacing.lg,
+    borderRadius: theme.borderRadius.md,
+    alignItems: 'center',
+    marginTop: theme.spacing.xl,
+    marginBottom: theme.spacing.md,
+  },
+});
 
-// Define StyledInput ONCE, with .attrs for placeholderTextColor
-const StyledInput = styled.TextInput.attrs(props => ({
-  placeholderTextColor: props.theme.colors.textSecondary,
-}))`
-  background-color: ${props => props.theme.colors.surface};
-  color: ${props => props.theme.colors.textPrimary}; // Actual text color
-  padding: ${props => props.theme.spacing.md}px;
-  border-radius: ${props => props.theme.borderRadius.sm}px;
-  border: 1px solid ${props => props.theme.colors.border};
-  font-size: ${props => props.theme.typography.body.fontSize}px;
-`;
-
-// StyledMultilineInput inherits from the correctly defined StyledInput
-const StyledMultilineInput = styled(StyledInput)`
-  min-height: 100px;
-  text-align-vertical: top; /* For Android */
-`;
-
-const StepsHeaderText = styled(InputLabel)`
-  font-size: ${props => props.theme.typography.h2.fontSize}px;
-  color: ${props => props.theme.colors.textPrimary};
-  margin-top: ${props => props.theme.spacing.lg}px;
-  margin-bottom: ${props => props.theme.spacing.sm}px;
-`;
-
-const StepContainer = styled.View`
-  background-color: ${props => props.theme.colors.surfaceVariant}; /* Slightly different background for steps */
-  padding: ${props => props.theme.spacing.md}px;
-  border-radius: ${props => props.theme.borderRadius.md}px;
-  margin-bottom: ${props => props.theme.spacing.md}px;
-  border: 1px solid ${props => props.theme.colors.border};
-`;
-
-// Ensure StepInput and StepTextArea also use .attrs for placeholderTextColor
-const StepInput = styled(StyledInput).attrs(props => ({
-  placeholderTextColor: props.theme.colors.textSecondary,
-}))`
-  margin-bottom: ${props => props.theme.spacing.sm}px;
-`;
-
-const StepTextArea = styled(StyledMultilineInput).attrs(props => ({
-  placeholderTextColor: props.theme.colors.textSecondary,
-}))`
-   margin-bottom: ${props => props.theme.spacing.sm}px;
-`;
-
-
-const AddStepButton = styled.TouchableOpacity`
-  background-color: ${props => props.theme.colors.primary};
-  padding: ${props => props.theme.spacing.md}px;
-  border-radius: ${props => props.theme.borderRadius.sm}px;
-  align-items: center;
-  margin-top: ${props => props.theme.spacing.sm}px;
-  margin-bottom: ${props => props.theme.spacing.lg}px;
-`;
-
-const RemoveStepButton = styled.TouchableOpacity`
-  background-color: ${props => props.theme.colors.error};
-  padding: ${props => props.theme.spacing.xs}px ${props => props.theme.spacing.sm}px;
-  border-radius: ${props => props.theme.borderRadius.xs}px;
-  align-items: center;
-  align-self: flex-end; /* Position to the right */
-  margin-top: ${props => props.theme.spacing.sm}px;
-`;
-
-const ButtonText = styled.Text`
-  color: #ffffff;
-  font-size: ${props => props.theme.typography.button.fontSize}px;
-  font-weight: ${props => props.theme.typography.button.fontWeight};
-`;
-
-const SaveButton = styled.TouchableOpacity`
-  background-color: ${props => props.theme.colors.accent};
-  padding: ${props => props.theme.spacing.lg}px;
-  border-radius: ${props => props.theme.borderRadius.md}px;
-  align-items: center;
-  margin-top: ${props => props.theme.spacing.xl}px;
-  margin-bottom: ${props => props.theme.spacing.md}px;
-`;
 
 const RoutineForm = () => {
   const navigation = useNavigation();
@@ -123,7 +126,7 @@ const RoutineForm = () => {
       setTitle(existingRoutine.title || '');
       setDescription(existingRoutine.description || '');
       setRoutineType(existingRoutine.routine_type || '');
-      setSteps(existingRoutine.steps && existingRoutine.steps.length > 0 ? existingRoutine.steps : [{ action: '', products_used: '', notes: '' }]);
+      setSteps(existingRoutine.steps && existingRoutine.steps.length > 0 ? existingRoutine.steps.map(s => ({...s, products_used: Array.isArray(s.products_used) ? s.products_used.join(', ') : (s.products_used || '') })) : [{ action: '', products_used: '', notes: '' }]);
     }
   }, [existingRoutine]);
 
@@ -151,7 +154,6 @@ const RoutineForm = () => {
       Alert.alert("Validation Error", "Please enter a title for the routine.");
       return;
     }
-    // Basic validation for steps (e.g., at least one step with an action)
     const validSteps = steps.filter(step => step.action && step.action.trim() !== '');
     if (validSteps.length === 0) {
         Alert.alert("Validation Error", "Please add at least one valid step with an action.");
@@ -164,9 +166,8 @@ const RoutineForm = () => {
       description,
       routine_type: routineType,
       steps: validSteps.map((step, index) => ({
-        step_number: index + 1, // Add step_number dynamically
+        step_number: index + 1,
         action: step.action,
-        // Assuming products_used is a comma-separated string for now, convert to array if desired
         products_used: step.products_used.split(',').map(p => p.trim()).filter(p => p),
         notes: step.notes,
       })),
@@ -174,7 +175,6 @@ const RoutineForm = () => {
 
     let response;
     if (existingRoutine) {
-      // Update existing routine
       response = await updateRoutine(existingRoutine.id, routineData);
       setLoading(false);
       if (response.error) {
@@ -184,7 +184,6 @@ const RoutineForm = () => {
         navigation.goBack();
       }
     } else {
-      // Create new routine
       response = await createRoutine(routineData);
       setLoading(false);
       if (response.error) {
@@ -198,72 +197,78 @@ const RoutineForm = () => {
 
   return (
     <ThemeProvider theme={theme}>
-      <FormContainer contentContainerStyle={{ paddingBottom: theme.spacing.xl }}>
-        <HeaderText>{existingRoutine ? 'Edit Routine' : 'Create New Routine'}</HeaderText>
+      <ScrollView style={styles.formContainer} contentContainerStyle={styles.formContentContainer}>
+        <Text style={styles.headerText}>{existingRoutine ? 'Edit Routine' : 'Create New Routine'}</Text>
 
-        <InputLabel>Title*</InputLabel>
-        <StyledInput
+        <Text style={styles.inputLabel}>Title*</Text>
+        <TextInput
+          style={styles.styledInput}
+          placeholderTextColor={theme.colors.textSecondary}
           placeholder="e.g., My Wash Day Routine"
           value={title}
           onChangeText={setTitle}
-          // placeholderTextColor prop removed, handled by styled component attrs
         />
 
-        <InputLabel>Description</InputLabel>
-        <StyledMultilineInput
+        <Text style={styles.inputLabel}>Description</Text>
+        <TextInput
+          style={[styles.styledInput, styles.styledMultilineInput]}
+          placeholderTextColor={theme.colors.textSecondary}
           placeholder="A brief description of this routine"
           value={description}
           onChangeText={setDescription}
           multiline
-          // placeholderTextColor prop removed
         />
 
-        <InputLabel>Routine Type</InputLabel>
-        <StyledInput
+        <Text style={styles.inputLabel}>Routine Type</Text>
+        <TextInput
+          style={styles.styledInput}
+          placeholderTextColor={theme.colors.textSecondary}
           placeholder="e.g., Wash Day, Daily, Treatment"
           value={routineType}
           onChangeText={setRoutineType}
-          // placeholderTextColor prop removed
         />
 
-        <StepsHeaderText>Steps</StepsHeaderText>
+        <Text style={styles.stepsHeaderText}>Steps</Text>
         {steps.map((step, index) => (
-          <StepContainer key={index}>
-            <InputLabel>{`Step ${index + 1}`}</InputLabel>
-            <StepInput // Assuming StepInput is derived from the new StyledInput
+          <View style={styles.stepContainer} key={index}>
+            <Text style={styles.inputLabel}>{`Step ${index + 1}`}</Text>
+            <TextInput
+              style={styles.styledInput}
+              placeholderTextColor={theme.colors.textSecondary}
               placeholder="Action (e.g., Cleanse, Condition)"
               value={step.action}
               onChangeText={(text) => handleStepChange(index, 'action', text)}
-              // placeholderTextColor prop removed
             />
-            <StepInput // Assuming StepInput is derived from the new StyledInput
+            <TextInput
+              style={styles.styledInput}
+              placeholderTextColor={theme.colors.textSecondary}
               placeholder="Products Used (comma-separated)"
-              value={step.products_used.toString()} // Convert array back to string for input if needed
+              value={step.products_used} // products_used is now a string in local state
               onChangeText={(text) => handleStepChange(index, 'products_used', text)}
-              // placeholderTextColor prop removed
             />
-            <StepTextArea // Assuming StepTextArea is derived from the new StyledMultilineInput
+            <TextInput
+              style={[styles.styledInput, styles.styledMultilineInput]}
+              placeholderTextColor={theme.colors.textSecondary}
               placeholder="Notes (optional)"
               value={step.notes}
               onChangeText={(text) => handleStepChange(index, 'notes', text)}
               multiline
-              // placeholderTextColor prop removed
             />
             {steps.length > 1 && (
-              <RemoveStepButton onPress={() => removeStep(index)}>
-                <ButtonText>Remove Step</ButtonText>
-              </RemoveStepButton>
+              <TouchableOpacity style={styles.removeStepButton} onPress={() => removeStep(index)}>
+                <Text style={styles.buttonText}>Remove Step</Text>
+              </TouchableOpacity>
             )}
-          </StepContainer>
+          </View>
         ))}
-        <AddStepButton onPress={addStep}>
-          <ButtonText>+ Add Another Step</ButtonText>
-        </AddStepButton>
+        <TouchableOpacity style={styles.addStepButton} onPress={addStep}>
+          <Text style={styles.buttonText}>+ Add Another Step</Text>
+        </TouchableOpacity>
 
-        <SaveButton onPress={handleSaveRoutine} disabled={loading}>
-          {loading ? <ActivityIndicator color="#fff" /> : <ButtonText>Save Routine</ButtonText>}
-        </SaveButton>
-      </FormContainer>
+        <TouchableOpacity style={styles.saveButton} onPress={handleSaveRoutine} disabled={loading}>
+          {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save Routine</Text>}
+        </TouchableOpacity>
+      </ScrollView>
     </ThemeProvider>
   );
 };
