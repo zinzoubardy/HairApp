@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native'; // Added ActivityIndicator
 import styled, { ThemeProvider } from 'styled-components/native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { createRoutine, updateRoutine } from '../services/SupabaseService.js';
@@ -36,7 +36,26 @@ const StyledInput = styled.TextInput`
   font-size: ${props => props.theme.typography.body.fontSize}px;
 `;
 
-const StyledMultilineInput = styled(StyledInput)`
+const StyledInputWithAttrs = styled.TextInput.attrs(props => ({
+  placeholderTextColor: props.theme.colors.textSecondary,
+}))`
+  background-color: ${props => props.theme.colors.surface};
+  color: ${props => props.theme.colors.text};
+  padding: ${props => props.theme.spacing.md}px;
+  border-radius: ${props => props.theme.borderRadius.sm}px;
+  border: 1px solid ${props => props.theme.colors.border};
+  font-size: ${props => props.theme.typography.body.fontSize}px;
+`;
+
+// Re-alias StyledInput to use the one with attrs for consistency if it was used directly elsewhere,
+// or transition to using StyledInputWithAttrs directly. For this change, I'll assume
+// StyledInput should become the one with attrs.
+const OldStyledInput = StyledInput; // Keep old one if needed, or remove if not
+const StyledInput = StyledInputWithAttrs; // New StyledInput uses attrs
+
+const StyledMultilineInput = styled(StyledInput).attrs(props => ({ // Ensure multiline also gets placeholder from theme
+  placeholderTextColor: props.theme.colors.textSecondary,
+}))`
   min-height: 100px;
   text-align-vertical: top; /* For Android */
 `;
@@ -56,11 +75,16 @@ const StepContainer = styled.View`
   border: 1px solid ${props => props.theme.colors.border};
 `;
 
-const StepInput = styled(StyledInput)`
+// Ensure StepInput and StepTextArea also use .attrs for placeholderTextColor
+const StepInput = styled(StyledInput).attrs(props => ({
+  placeholderTextColor: props.theme.colors.textSecondary,
+}))`
   margin-bottom: ${props => props.theme.spacing.sm}px;
 `;
 
-const StepTextArea = styled(StyledMultilineInput)`
+const StepTextArea = styled(StyledMultilineInput).attrs(props => ({
+  placeholderTextColor: props.theme.colors.textSecondary,
+}))`
    margin-bottom: ${props => props.theme.spacing.sm}px;
 `;
 
@@ -197,7 +221,7 @@ const RoutineForm = () => {
           placeholder="e.g., My Wash Day Routine"
           value={title}
           onChangeText={setTitle}
-          placeholderTextColor={theme.colors.textSecondary}
+          // placeholderTextColor prop removed, handled by styled component attrs
         />
 
         <InputLabel>Description</InputLabel>
@@ -206,7 +230,7 @@ const RoutineForm = () => {
           value={description}
           onChangeText={setDescription}
           multiline
-          placeholderTextColor={theme.colors.textSecondary}
+          // placeholderTextColor prop removed
         />
 
         <InputLabel>Routine Type</InputLabel>
@@ -214,31 +238,31 @@ const RoutineForm = () => {
           placeholder="e.g., Wash Day, Daily, Treatment"
           value={routineType}
           onChangeText={setRoutineType}
-          placeholderTextColor={theme.colors.textSecondary}
+          // placeholderTextColor prop removed
         />
 
         <StepsHeaderText>Steps</StepsHeaderText>
         {steps.map((step, index) => (
           <StepContainer key={index}>
             <InputLabel>{`Step ${index + 1}`}</InputLabel>
-            <StyledInput
+            <StepInput // Assuming StepInput is derived from the new StyledInput
               placeholder="Action (e.g., Cleanse, Condition)"
               value={step.action}
               onChangeText={(text) => handleStepChange(index, 'action', text)}
-              placeholderTextColor={theme.colors.textSecondary}
+              // placeholderTextColor prop removed
             />
-            <StyledInput
+            <StepInput // Assuming StepInput is derived from the new StyledInput
               placeholder="Products Used (comma-separated)"
               value={step.products_used.toString()} // Convert array back to string for input if needed
               onChangeText={(text) => handleStepChange(index, 'products_used', text)}
-              placeholderTextColor={theme.colors.textSecondary}
+              // placeholderTextColor prop removed
             />
-            <StepTextArea
+            <StepTextArea // Assuming StepTextArea is derived from the new StyledMultilineInput
               placeholder="Notes (optional)"
               value={step.notes}
               onChangeText={(text) => handleStepChange(index, 'notes', text)}
               multiline
-              placeholderTextColor={theme.colors.textSecondary}
+              // placeholderTextColor prop removed
             />
             {steps.length > 1 && (
               <RemoveStepButton onPress={() => removeStep(index)}>
