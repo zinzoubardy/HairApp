@@ -33,6 +33,14 @@ const HomeScreen = ({ navigation }) => {
       screen: "Profile",
       gradientColors: [theme.colors.accent, theme.colors.secondary], // Magenta to Teal
     },
+    {
+      id: "routines",
+      title: "My Routines",
+      description: "Manage your haircare routines",
+      icon: "list-outline", // Example icon
+      screen: "Routine", // Navigate to RoutineScreen
+      gradientColors: [theme.colors.info, theme.colors.success], // Example: Blue to Green
+    },
   ];
 
   // Calculate paddingTop dynamically within the component
