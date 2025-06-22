@@ -50,7 +50,7 @@ The following features are targeted for the Minimum Viable Product:
 *   **Styling and Theming:** A new futuristic dark theme has been implemented using **Styled Components** and applied to `HomeScreen` and `HairAIScreen`. The `src/styles/theme.js` file defines the core color palette and fonts.
 *   **AI Integration:** Direct integration with **Together AI** for advanced text-based hair advice is implemented in `src/services/AIService.js`.
 *   **Backend Foundation (from original `HairApp`):**
-    *   Supabase tables (`profiles`, `hair_analysis_results`, `routines`) and Row Level Security policies are defined. Schemas for `coloring_recipes` and `progress_log` have been documented (`supabase_table_schemas.md`).
+    *   Supabase tables (`profiles`, `hair_analysis_results`, `routines`) and Row Level Security policies are defined. Schemas for `coloring_recipes` and `progress_log` have been documented (`supabase_table_schemas.md`) and initial setup SQL scripts are available in the `sql/` directory (see "Database Setup Scripts" section below).
     *   Trigger for automatic user profile creation on sign-up.
 *   **Frontend Foundation (from original `HairApp` `src` folder, with updates):**
     *   Core `AuthContext` for managing user sessions.
@@ -141,4 +141,16 @@ The following features are targeted for the Minimum Viable Product:
     npx expo start
     ```
     Follow the prompts to open on a device/emulator.
+
+## Database Setup Scripts
+The `sql/` directory contains scripts to help set up necessary database tables, Row Level Security (RLS) policies, and storage policies if you have an existing Supabase project or are setting one up manually. These scripts are designed to be idempotent where possible (i.e., safe to run multiple times).
+
+*   `sql/01_create_coloring_recipes.sql`: Sets up the `coloring_recipes` table, enables RLS, defines a public read policy, and an auto-update trigger for the `updated_at` column. It's adjusted to work with the existing table structure if provided.
+*   `sql/02_create_progress_log.sql`: Sets up the `progress_log` table, enables RLS, defines CRUD policies for users on their own logs, and an `updated_at` trigger. It's adjusted for existing table structures.
+*   `sql/03_storage_hair_images_policies.sql`: Defines RLS policies for a Supabase Storage bucket named `user.hair.images`. These policies control who can list, view, upload, update, and delete files, generally scoping access to the authenticated user for their own files/folders.
+
+**Important:**
+*   Always review SQL scripts before running them on your database.
+*   For storage policies (`03_storage_hair_images_policies.sql`), ensure the bucket (`user.hair.images`) exists in your Supabase project. Creating policies via the Supabase Dashboard UI is often a good alternative or primary method for storage RLS. If running the SQL directly for storage policies fails due to permissions (e.g., "must be owner of relation objects"), using the Supabase UI is recommended.
+*   These scripts assume standard Supabase setup and `auth.uid()` for user identification.
 ```

@@ -1,98 +1,93 @@
--- Supabase Storage Policies for a bucket named 'user_hair_images'
--- This bucket will store images uploaded by users, organized by user_id.
+-- Supabase Storage Policies for bucket 'user.hair.images'
+-- Revised based on successful minimal policy test.
 
--- First, ensure the bucket exists. This command is typically run via Supabase Studio UI
--- or programmatically. If running this SQL directly, you might need to create the bucket manually first
--- if it doesn't exist, or use a Supabase client library to ensure its creation.
--- Example: INSERT INTO storage.buckets (id, name, public) VALUES ('user_hair_images', 'user_hair_images', false)
--- ON CONFLICT (id) DO NOTHING;
--- For this script, we'll assume the bucket 'user_hair_images' has been created and is NOT public.
+-- Bucket name: user.hair.images (ensure this bucket exists and is not public)
 
--- Policy: Allow authenticated users to list their own folder.
-DROP POLICY IF EXISTS "Allow authenticated user to list own folder" ON storage.objects;
-CREATE POLICY "Allow authenticated user to list own folder"
+-- Policy: Allow authenticated users to list files in their own folder.
+-- Assumes files are stored in a path like 'user_id/filename.ext'.
+-- (storage.foldername(name)) returns an array of path components.
+-- (storage.foldername(name))[1] should be the user_id.
+DROP POLICY IF EXISTS "Allow authenticated user to list own folder in user.hair.images" ON storage.objects;
+CREATE POLICY "Allow authenticated user to list own folder in user.hair.images"
     ON storage.objects
     FOR SELECT
     TO authenticated
-    USING (bucket_id = 'user_hair_images' AND auth.uid()::text = (storage.foldername(name))[1]);
+    USING (
+        bucket_id = 'user.hair.images' AND
+        auth.uid()::text = (storage.foldername(name))[1]
+    );
 
--- Policy: Allow authenticated users to select/download files from their own folder.
-DROP POLICY IF EXISTS "Allow authenticated user to select own files" ON storage.objects;
-CREATE POLICY "Allow authenticated user to select own files"
+-- Policy: Allow authenticated users to select/download their own files.
+-- This policy relies on the 'owner' field of the object being set to the user's UID upon upload.
+-- Supabase client libraries typically handle this. This is often more robust than path parsing.
+DROP POLICY IF EXISTS "Allow authenticated user to select own files from user.hair.images" ON storage.objects;
+CREATE POLICY "Allow authenticated user to select own files from user.hair.images"
     ON storage.objects
     FOR SELECT
     TO authenticated
-    USING (bucket_id = 'user_hair_images' AND auth.uid() = owner); -- Simpler check using owner if files are uploaded with owner set to auth.uid()
-    -- OR more explicitly if using folder structure:
-    -- USING (bucket_id = 'user_hair_images' AND auth.uid()::text = (storage.foldername(name))[1]);
+    USING (
+        bucket_id = 'user.hair.images' AND
+        auth.uid() = owner  -- Check if the authenticated user is the owner of the file
+    );
 
 -- Policy: Allow authenticated users to upload files into their own folder.
--- The folder will be named after their user_id.
--- Example path: user_id/image_name.jpg
-DROP POLICY IF EXISTS "Allow authenticated user to upload to own folder" ON storage.objects;
-CREATE POLICY "Allow authenticated user to upload to own folder"
+-- Path must start with user_id: 'user_id/filename.ext'
+DROP POLICY IF EXISTS "Allow authenticated user to upload to own folder in user.hair.images" ON storage.objects;
+CREATE POLICY "Allow authenticated user to upload to own folder in user.hair.images"
     ON storage.objects
     FOR INSERT
     TO authenticated
     WITH CHECK (
-        bucket_id = 'user_hair_images' AND
-        auth.uid()::text = (storage.foldername(name))[1] AND
-        -- Optionally, restrict file types here. This example allows common image types.
-        -- (lower(storage.extension(name)) IN ('jpg', 'jpeg', 'png', 'gif')) AND -- This requires storage.extension function
-        -- Optionally, restrict file size here (e.g., less than 5MB).
-        -- size < 5 * 1024 * 1024 -- This check is on the metadata, might need a trigger for more robust validation.
-        true -- Placeholder if not adding specific type/size checks in policy directly
+        bucket_id = 'user.hair.images' AND
+        auth.uid()::text = (storage.foldername(name))[1]
+        -- Optional: Add checks for file type or size here if needed, e.g.
+        -- AND lower(storage.extension(name)) IN ('jpg', 'jpeg', 'png')
+        -- AND (storage.metadata ->> 'size')::bigint < 5000000 -- Check size from metadata (example: < 5MB)
     );
 
--- Policy: Allow authenticated users to update files in their own folder.
-DROP POLICY IF EXISTS "Allow authenticated user to update own files" ON storage.objects;
-CREATE POLICY "Allow authenticated user to update own files"
+-- Policy: Allow authenticated users to update their own files.
+DROP POLICY IF EXISTS "Allow authenticated user to update own files in user.hair.images" ON storage.objects;
+CREATE POLICY "Allow authenticated user to update own files in user.hair.images"
     ON storage.objects
     FOR UPDATE
     TO authenticated
-    USING (bucket_id = 'user_hair_images' AND auth.uid() = owner)
-    WITH CHECK (bucket_id = 'user_hair_images' AND auth.uid() = owner);
-    -- OR using folder structure:
-    -- USING (bucket_id = 'user_hair_images' AND auth.uid()::text = (storage.foldername(name))[1])
-    -- WITH CHECK (bucket_id = 'user_hair_images' AND auth.uid()::text = (storage.foldername(name))[1]);
+    USING (
+        bucket_id = 'user.hair.images' AND
+        auth.uid() = owner -- User can update an object if they are the owner
+    )
+    WITH CHECK (
+        bucket_id = 'user.hair.images' AND
+        auth.uid() = owner
+        -- If you also want to enforce that they can only update within their folder path, add:
+        -- AND auth.uid()::text = (storage.foldername(name))[1]
+        -- However, owner check is usually sufficient for UPDATE.
+    );
 
-
--- Policy: Allow authenticated users to delete files from their own folder.
-DROP POLICY IF EXISTS "Allow authenticated user to delete own files" ON storage.objects;
-CREATE POLICY "Allow authenticated user to delete own files"
+-- Policy: Allow authenticated users to delete their own files.
+DROP POLICY IF EXISTS "Allow authenticated user to delete own files from user.hair.images" ON storage.objects;
+CREATE POLICY "Allow authenticated user to delete own files from user.hair.images"
     ON storage.objects
     FOR DELETE
     TO authenticated
-    USING (bucket_id = 'user_hair_images' AND auth.uid() = owner);
-    -- OR using folder structure:
-    -- USING (bucket_id = 'user_hair_images' AND auth.uid()::text = (storage.foldername(name))[1]);
+    USING (
+        bucket_id = 'user.hair.images' AND
+        auth.uid() = owner -- User can delete an object if they are the owner
+    );
 
-COMMENT ON POLICY "Allow authenticated user to list own folder" ON storage.objects IS
-'Users can list the contents of their own folder within the user_hair_images bucket.';
-COMMENT ON POLICY "Allow authenticated user to select own files" ON storage.objects IS
-'Users can download/read files they own or that are within their user-specific folder in user_hair_images bucket.';
-COMMENT ON POLICY "Allow authenticated user to upload to own folder" ON storage.objects IS
-'Users can upload new files into their own user-specific folder in user_hair_images bucket. Path must start with their user_id.';
-COMMENT ON POLICY "Allow authenticated user to update own files" ON storage.objects IS
-'Users can update files they own or that are within their user-specific folder in user_hair_images bucket.';
-COMMENT ON POLICY "Allow authenticated user to delete own files" ON storage.objects IS
-'Users can delete files they own or that are within their user-specific folder in user_hair_images bucket.';
+COMMENT ON POLICY "Allow authenticated user to list own folder in user.hair.images" ON storage.objects IS
+'Users can list files within their own user_id-named folder in the user.hair.images bucket.';
+COMMENT ON POLICY "Allow authenticated user to select own files from user.hair.images" ON storage.objects IS
+'Users can download/read files they own in the user.hair.images bucket.';
+COMMENT ON POLICY "Allow authenticated user to upload to own folder in user.hair.images" ON storage.objects IS
+'Users can upload new files into their own user_id-named folder (e.g., user_id/filename.ext) in the user.hair.images bucket.';
+COMMENT ON POLICY "Allow authenticated user to update own files in user.hair.images" ON storage.objects IS
+'Users can update files they own in the user.hair.images bucket.';
+COMMENT ON POLICY "Allow authenticated user to delete own files from user.hair.images" ON storage.objects IS
+'Users can delete files they own in the user.hair.images bucket.';
 
--- Note on file type and size restrictions:
--- While some basic checks can be attempted in policies (like extension), more robust validation
--- (e.g., checking actual MIME type, more complex size limits based on subscription tier)
--- is often better handled using Supabase Edge Functions triggered on file upload,
--- or client-side validation before upload, or a combination.
--- The `storage.foldername(name)` array access `[1]` assumes the first part of the path is the user_id.
--- e.g. if name is 'user_uuid/image.png', (storage.foldername(name))[1] is 'user_uuid'.
--- If name is 'image.png' (uploading to root), (storage.foldername(name)) might be empty or different.
--- Ensure your client-side upload logic creates paths like 'user_id/filename.ext'.
--- The `auth.uid() = owner` check is simpler if the `owner` field of storage.objects is reliably set to the uploader's UID.
--- Supabase client libraries usually handle setting the owner field correctly. Using `owner` is often preferred.
--- For policies that use `(storage.foldername(name))[1]`, ensure that files are always uploaded into a top-level folder named with the user's UID.
--- e.g., `client.storage.from('user_hair_images').upload(`${userId}/${fileName}`, file)`
--- If files can be uploaded without a top-level user ID folder, these policies might be too restrictive or too permissive.
--- The policies above using `auth.uid() = owner` are generally more robust if your client library sets the owner correctly.
--- I've included both approaches (folder path check and owner check) as comments for consideration.
--- For the main policy, I've opted for the `auth.uid() = owner` where it simplifies things, assuming standard client usage.
--- For upload (INSERT), explicitly checking the path structure `(storage.foldername(name))[1]` is good for enforcement.
+-- Notes:
+-- 1. Bucket Name: Ensure 'user.hair.images' is correct.
+-- 2. File Paths for Upload: For policies relying on `(storage.foldername(name))[1]`, your application must upload files to paths like `USER_ID/your_file_name.jpg`.
+-- 3. Owner Field: Policies using `auth.uid() = owner` assume that the `owner` field on `storage.objects` is correctly populated with the uploader's `auth.uid()`. Supabase client libraries usually do this.
+-- 4. File Type/Size Checks: For more robust validation of file types or sizes, consider using Supabase Edge Functions triggered on upload, in addition to or instead of policy checks. Policy checks on metadata (like size) are possible but might have limitations.
+-- 5. Test Thoroughly: After applying, test all operations (list, select/download, insert/upload, update, delete) with different user accounts to ensure policies work as expected.
