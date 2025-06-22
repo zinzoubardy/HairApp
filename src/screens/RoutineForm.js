@@ -27,35 +27,20 @@ const InputLabel = styled.Text`
   margin-top: ${props => props.theme.spacing.md}px;
 `;
 
-const StyledInput = styled.TextInput`
+// Define StyledInput ONCE, with .attrs for placeholderTextColor
+const StyledInput = styled.TextInput.attrs(props => ({
+  placeholderTextColor: props.theme.colors.textSecondary,
+}))`
   background-color: ${props => props.theme.colors.surface};
-  color: ${props => props.theme.colors.text};
+  color: ${props => props.theme.colors.text}; // Actual text color
   padding: ${props => props.theme.spacing.md}px;
   border-radius: ${props => props.theme.borderRadius.sm}px;
   border: 1px solid ${props => props.theme.colors.border};
   font-size: ${props => props.theme.typography.body.fontSize}px;
 `;
 
-const StyledInputWithAttrs = styled.TextInput.attrs(props => ({
-  placeholderTextColor: props.theme.colors.textSecondary,
-}))`
-  background-color: ${props => props.theme.colors.surface};
-  color: ${props => props.theme.colors.text};
-  padding: ${props => props.theme.spacing.md}px;
-  border-radius: ${props => props.theme.borderRadius.sm}px;
-  border: 1px solid ${props => props.theme.colors.border};
-  font-size: ${props => props.theme.typography.body.fontSize}px;
-`;
-
-// Re-alias StyledInput to use the one with attrs for consistency if it was used directly elsewhere,
-// or transition to using StyledInputWithAttrs directly. For this change, I'll assume
-// StyledInput should become the one with attrs.
-const OldStyledInput = StyledInput; // Keep old one if needed, or remove if not
-const StyledInput = StyledInputWithAttrs; // New StyledInput uses attrs
-
-const StyledMultilineInput = styled(StyledInput).attrs(props => ({ // Ensure multiline also gets placeholder from theme
-  placeholderTextColor: props.theme.colors.textSecondary,
-}))`
+// StyledMultilineInput inherits from the correctly defined StyledInput
+const StyledMultilineInput = styled(StyledInput)`
   min-height: 100px;
   text-align-vertical: top; /* For Android */
 `;
