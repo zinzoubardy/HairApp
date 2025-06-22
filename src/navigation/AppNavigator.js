@@ -5,6 +5,8 @@ import UploadScreen from "../screens/UploadScreen";
 import ProfileScreen from "../screens/ProfileScreen";
 import AnalysisResultScreen from "../screens/AnalysisResultScreen";
 import HairAIScreen from "../screens/HairAIScreen"; // Import the new AI screen
+import RoutineScreen from "../screens/RoutineScreen"; // Import RoutineScreen
+import RoutineForm from "../screens/RoutineForm";   // Import RoutineForm
 import theme from "../styles/theme";
 
 const Stack = createStackNavigator();
@@ -48,6 +50,18 @@ const AppNavigator = () => {
         name="Profile"
         component={ProfileScreen}
         options={{ title: "My Profile" }}
+      />
+      <Stack.Screen
+        name="Routine"
+        component={RoutineScreen}
+        options={{ title: "My Routines" }}
+      />
+      <Stack.Screen
+        name="RoutineForm"
+        component={RoutineForm}
+        options={({ route }) => ({
+          title: route.params?.routine ? "Edit Routine" : "Create Routine",
+        })}
       />
     </Stack.Navigator>
   );
