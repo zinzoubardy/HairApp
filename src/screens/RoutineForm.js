@@ -7,9 +7,21 @@ import theme from '../styles/theme.js';
 
 // All styled.* definitions are commented out for debugging CssSyntaxError
 
+// Step 1.1: Restore FormContainer
+const FormContainer = styled(ScrollView)`
+  flex: 1;
+  background-color: ${props => props.theme.colors.background};
+  /* padding: ${props => props.theme.spacing.md}px; // Removed, using contentContainerStyle on instance */
+`;
+
+const HeaderText = styled.Text`
+  font-size: ${props => props.theme.typography.h1.fontSize}px;
+  font-weight: ${props => props.theme.typography.h1.fontWeight};
+  color: ${props => props.theme.colors.textPrimary};
+  margin-bottom: ${props => props.theme.spacing.lg}px;
+  text-align: center;
+`;
 /*
-const FormContainer = styled(ScrollView)`...`;
-const HeaderText = styled.Text`...`;
 const InputLabel = styled.Text`...`;
 const StyledInput = styled.TextInput.attrs(...)`...`;
 const StyledMultilineInput = styled(StyledInput)`...`;
@@ -197,8 +209,8 @@ const RoutineForm = () => {
 
   return (
     <ThemeProvider theme={theme}>
-      <ScrollView style={styles.formContainer} contentContainerStyle={styles.formContentContainer}>
-        <Text style={styles.headerText}>{existingRoutine ? 'Edit Routine' : 'Create New Routine'}</Text>
+      <FormContainer contentContainerStyle={styles.formContentContainer}>
+        <HeaderText>{existingRoutine ? 'Edit Routine' : 'Create New Routine'}</HeaderText>
 
         <Text style={styles.inputLabel}>Title*</Text>
         <TextInput
