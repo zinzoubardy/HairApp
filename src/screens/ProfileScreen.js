@@ -9,13 +9,14 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator
+  ActivityIndicator,
+  Image // Added for displaying images
 } from "react-native";
-// AsyncStorage is no longer primarily used for profile data, but could be a fallback or for other settings.
-// import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as ImagePicker from 'expo-image-picker'; // Import expo-image-picker
 import theme from "../styles/theme";
 import { useAuth } from "../contexts/AuthContext";
-import { getProfile, updateProfile } from "../services/SupabaseService"; // Import Supabase helpers
+// Added uploadProfileImage to imports
+import { getProfile, updateProfile, uploadProfileImage } from "../services/SupabaseService";
 
 // const PROFILE_DATA_KEY = "@HairNatureAI_ProfileData"; // Keep for potential local-only settings or fallback
 
@@ -35,10 +36,22 @@ const ProfileScreen = ({ navigation }) => {
   const [profilePicLeftUrl, setProfilePicLeftUrl] = useState("");
   const [profilePicBackUrl, setProfilePicBackUrl] = useState("");
 
-  const [isLoading, setIsLoading] = useState(false); // For initial data load from Supabase
-  const [isSaving, setIsSaving] = useState(false);  // For saving data to Supabase
+  const [isLoading, setIsLoading] = useState(false); // For initial data load
+  const [isSaving, setIsSaving] = useState(false);  // For saving all profile text data
+  const [uploadingAngle, setUploadingAngle] = useState(null); // To show loading on specific image button: "up", "left", etc.
+
 
   useEffect(() => {
+    // Request permissions when component mounts, can also be done on button press
+    (async () => {
+      if (Platform.OS !== 'web') {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Permission Denied', 'Sorry, we need camera roll permissions to make this work!');
+        }
+      }
+    })();
+
     const loadProfileData = async () => {
       if (!user) return; // Don't attempt to load if user is not logged in
 
@@ -149,6 +162,48 @@ const ProfileScreen = ({ navigation }) => {
     }
     // Navigation to AuthScreen will be handled by onAuthStateChange
   };
+
+  const handlePickAndUploadImage = async (angle) => {
+    if (!user) {
+      Alert.alert("Not Logged In", "You must be logged in to upload images.");
+      return;
+    }
+
+    // No permissions request is necessary for launching the image library
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3], // Example aspect ratio, adjust as needed
+      quality: 0.7, // Compress image slightly
+    });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      const fileUri = result.assets[0].uri;
+      setUploadingAngle(angle); // Show loading indicator for this angle
+      try {
+        const { data: uploadData, error: uploadError } = await uploadProfileImage(user.id, fileUri, angle);
+
+        if (uploadError) {
+          Alert.alert("Upload Error", `Could not upload ${angle} image: ${uploadError.message}`);
+        } else if (uploadData && uploadData.publicUrl) {
+          // Update the correct state based on the angle
+          switch (angle) {
+            case "up": setProfilePicUpUrl(uploadData.publicUrl); break;
+            case "right": setProfilePicRightUrl(uploadData.publicUrl); break;
+            case "left": setProfilePicLeftUrl(uploadData.publicUrl); break;
+            case "back": setProfilePicBackUrl(uploadData.publicUrl); break;
+            default: break;
+          }
+          Alert.alert("Upload Success", `${angle.charAt(0).toUpperCase() + angle.slice(1)} image uploaded! Remember to save your profile to keep this change.`);
+        }
+      } catch (e) {
+        Alert.alert("Upload Exception", `An error occurred: ${e.message}`);
+      } finally {
+        setUploadingAngle(null); // Hide loading indicator
+      }
+    }
+  };
+
 
   if (isLoading && !user) { // Show nothing or a generic loading if user isn't available yet during initial auth check
     return (
@@ -284,27 +339,35 @@ const ProfileScreen = ({ navigation }) => {
           />
         </View>
 
-        {/* Placeholder for Image URL Inputs - Actual upload UI will be more complex */}
+        {/* Profile Image Upload Section */}
         <View style={styles.sectionTitleContainer}>
-          <Text style={{...styles.sectionTitle, color: theme.colors.textPrimary, fontFamily: theme.fonts.title }}>Profile Image URLs (Temporary)</Text>
+          <Text style={{...styles.sectionTitle, color: theme.colors.textPrimary, fontFamily: theme.fonts.title }}>Your Profile Pictures</Text>
         </View>
-        <View style={styles.inputGroup}>
-            <Text style={{...styles.label, fontFamily: theme.fonts.body, color: theme.colors.textPrimary}}>Picture URL (Up)</Text>
-            <TextInput style={{...styles.input, fontFamily: theme.fonts.body, color: theme.colors.textPrimary}} value={profilePicUpUrl} onChangeText={setProfilePicUpUrl} placeholder="URL for 'up' angle picture" placeholderTextColor={theme.colors.textSecondary} editable={!isSaving && !loadingAuthAction} />
+        <View style={styles.imageUploadGrid}>
+            {[
+              { angle: "up", label: "Up View", url: profilePicUpUrl, setter: setProfilePicUpUrl },
+              { angle: "right", label: "Right Side", url: profilePicRightUrl, setter: setProfilePicRightUrl },
+              { angle: "left", label: "Left Side", url: profilePicLeftUrl, setter: setProfilePicLeftUrl },
+              { angle: "back", label: "Back View", url: profilePicBackUrl, setter: setProfilePicBackUrl },
+            ].map(img => (
+                <View key={img.angle} style={styles.imageUploadContainer}>
+                    <Text style={{...styles.label, textAlign: 'center', marginBottom: theme.spacing.sm}}>{img.label}</Text>
+                    <TouchableOpacity
+                        style={styles.imagePickerButton}
+                        onPress={() => handlePickAndUploadImage(img.angle)}
+                        disabled={uploadingAngle === img.angle || isSaving}
+                    >
+                        {uploadingAngle === img.angle ? (
+                            <ActivityIndicator size="small" color={theme.colors.primary} />
+                        ) : img.url ? (
+                            <Image source={{ uri: img.url }} style={styles.profileImagePreview} />
+                        ) : (
+                            <Text style={styles.imagePickerButtonText}>Upload</Text>
+                        )}
+                    </TouchableOpacity>
+                </View>
+            ))}
         </View>
-        <View style={styles.inputGroup}>
-            <Text style={{...styles.label, fontFamily: theme.fonts.body, color: theme.colors.textPrimary}}>Picture URL (Right Side)</Text>
-            <TextInput style={{...styles.input, fontFamily: theme.fonts.body, color: theme.colors.textPrimary}} value={profilePicRightUrl} onChangeText={setProfilePicRightUrl} placeholder="URL for 'right side' angle picture" placeholderTextColor={theme.colors.textSecondary} editable={!isSaving && !loadingAuthAction} />
-        </View>
-        <View style={styles.inputGroup}>
-            <Text style={{...styles.label, fontFamily: theme.fonts.body, color: theme.colors.textPrimary}}>Picture URL (Left Side)</Text>
-            <TextInput style={{...styles.input, fontFamily: theme.fonts.body, color: theme.colors.textPrimary}} value={profilePicLeftUrl} onChangeText={setProfilePicLeftUrl} placeholder="URL for 'left side' angle picture" placeholderTextColor={theme.colors.textSecondary} editable={!isSaving && !loadingAuthAction} />
-        </View>
-        <View style={styles.inputGroup}>
-            <Text style={{...styles.label, fontFamily: theme.fonts.body, color: theme.colors.textPrimary}}>Picture URL (Back)</Text>
-            <TextInput style={{...styles.input, fontFamily: theme.fonts.body, color: theme.colors.textPrimary}} value={profilePicBackUrl} onChangeText={setProfilePicBackUrl} placeholder="URL for 'back' angle picture" placeholderTextColor={theme.colors.textSecondary} editable={!isSaving && !loadingAuthAction} />
-        </View>
-
 
         <TouchableOpacity
           style={{...styles.button, backgroundColor: isSaving || loadingAuthAction ? theme.colors.border : theme.colors.primary}}
@@ -402,6 +465,37 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: theme.fontSizes.lg,
     fontWeight: "bold",
+  },
+  imageUploadGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-around', // Distribute items
+    marginBottom: theme.spacing.lg,
+  },
+  imageUploadContainer: {
+    width: '45%', // Two items per row with some spacing
+    alignItems: 'center',
+    marginBottom: theme.spacing.md,
+  },
+  imagePickerButton: {
+    width: 120,
+    height: 120,
+    borderRadius: theme.borderRadius.md,
+    backgroundColor: theme.colors.borderMuted,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  imagePickerButtonText: {
+    color: theme.colors.textSecondary,
+    fontFamily: theme.fonts.body,
+  },
+  profileImagePreview: {
+    width: '100%',
+    height: '100%',
+    borderRadius: theme.borderRadius.md,
+    resizeMode: 'cover',
   }
 });
 

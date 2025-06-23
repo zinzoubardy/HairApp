@@ -64,12 +64,29 @@ export const getHairAnalysis = async (profileData, imageReferences) => {
   }
 
   prompt += `
-    Please structure your response with:
-    1.  **Overall Hair & Scalp Assessment:** Your general conclusions about the user's current hair and scalp state based on the provided details.
-    2.  **Key Observations & Potential Issues:** Specific points you've noted (e.g., potential dryness if mentioned in condition, possible effects of allergies).
-    3.  **Preliminary Recommendations:** Actionable first steps or advice for products, routines, or practices.
+    Please structure your response STRICTLY as follows, using the exact headings and formatting:
 
-    Keep the tone helpful, informative, and professional.
+    **1. Global Hair State Score:**
+    Provide a percentage score (e.g., "75%") representing the overall health and condition of the hair and scalp based on all provided information. Briefly justify this score in one sentence.
+    Example: "Global Hair State Score: 75% - Hair shows good potential but needs attention to dryness."
+
+    **2. Detailed Scalp Analysis:**
+    Provide a specific analysis of the scalp's condition. Mention any observed or inferred issues (dryness, oiliness, flakiness, sensitivity) and positive aspects.
+    Example: "Scalp Analysis: The scalp appears to be normal to dry. There might be slight tightness if not moisturized regularly. No signs of severe irritation are inferred from the text."
+
+    **3. Detailed Color Analysis:**
+    Analyze the hair color characteristics based on user's input and typical considerations for such hair color (e.g., maintenance, potential for dryness if color-treated). If the user mentions color treatments, comment on their potential impact.
+    Example: "Color Analysis: User states hair color is 'Dark Brown'. Dark brown hair can sometimes appear dull if not properly clarified. If color-treated, porosity might be a concern."
+
+    **4. Key Observations & Potential Issues:**
+    List 2-3 key observations or potential issues not covered above.
+    Example: "Key Observations & Potential Issues:\n- Observation: User mentions 'frizz' as a concern.\n- Potential Issue: Allergies to 'Aloe Vera' need careful product selection."
+
+    **5. Recommendations:**
+    Provide 3-5 actionable recommendations. For each recommendation, suggest a simple keyword that could represent an icon (e.g., "IconHint: water-drop", "IconHint: leaf", "IconHint: scissors").
+    Example: "Recommendations:\n- Recommendation: Use a sulfate-free moisturizing shampoo. IconHint: shampoo\n- Recommendation: Incorporate a weekly deep conditioning treatment. IconHint: conditioner-mask"
+
+    Keep the tone helpful, informative, and professional. Ensure each section is clearly delineated.
   `;
 
   try {

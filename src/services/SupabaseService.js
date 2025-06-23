@@ -79,6 +79,84 @@ export const getProfile = async () => {
   }
 };
 
+// --- Trending Recipes Helper Functions ---
+export const getTrendingRecipes = async (limit = 10) => {
+  try {
+    const { data, error } = await supabase
+      .from("trending_recipes")
+      .select("id, title, short_description, image_url, ingredients, instructions, preparation_time_minutes, difficulty, tags")
+      .order("created_at", { ascending: false }) // Or order by some popularity metric later
+      .limit(limit);
+
+    if (error) {
+      console.error("Error fetching trending recipes:", error.message);
+      // throw error; // Or return error object
+    }
+    return { data, error };
+  } catch (e) {
+    console.error("Exception fetching trending recipes:", e);
+    // throw e; // Or return error object
+    return { data: null, error: { message: e.message || "An unexpected error occurred while fetching recipes." } };
+  }
+};
+
+// --- Storage Helper Functions ---
+export const uploadProfileImage = async (userId, fileUri, angle) => {
+  if (!userId || !fileUri || !angle) {
+    return { data: null, error: { message: "User ID, file URI, and angle are required." } };
+  }
+
+  try {
+    const fileExtension = fileUri.split('.').pop()?.toLowerCase() || 'jpg';
+    const fileName = `${angle}.${fileExtension}`;
+    const filePath = `${userId}/${fileName}`; // Store in folder named after userId
+
+    // Supabase storage needs a File object or a Blob.
+    // For React Native, we need to fetch the image URI and convert it to a Blob.
+    const response = await fetch(fileUri);
+    const blob = await response.blob();
+
+    // Determine content type
+    let contentType = 'image/jpeg'; // Default
+    if (fileExtension === 'png') {
+      contentType = 'image/png';
+    } else if (fileExtension === 'webp') {
+      contentType = 'image/webp';
+    }
+    // Add more types if needed
+
+    const { data, error: uploadError } = await supabase.storage
+      .from('profile-pictures') // Bucket name
+      .upload(filePath, blob, {
+        cacheControl: '3600', // Optional: cache for 1 hour
+        upsert: true, // True to overwrite if file already exists, false to error
+        contentType: contentType,
+      });
+
+    if (uploadError) {
+      console.error(`Error uploading ${angle} image:`, uploadError.message);
+      return { data: null, error: uploadError };
+    }
+
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from('profile-pictures')
+      .getPublicUrl(filePath);
+
+    if (!urlData || !urlData.publicUrl) {
+        console.error(`Error getting public URL for ${angle} image.`);
+        return { data: null, error: { message: `Failed to get public URL for ${angle} image after upload.`} };
+    }
+
+    return { data: { publicUrl: urlData.publicUrl }, error: null };
+
+  } catch (e) {
+    console.error(`Exception during ${angle} image upload:`, e);
+    return { data: null, error: { message: e.message || `An unexpected error occurred during ${angle} image upload.` } };
+  }
+};
+
+
 // --- Hair Analysis Results Helper Functions ---
 
 export const saveHairAnalysisResult = async (userId, analysisResponse, imageReferences, notes = null) => {
