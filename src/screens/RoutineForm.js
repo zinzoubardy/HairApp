@@ -280,7 +280,7 @@ const RoutineForm = () => {
         <TouchableOpacity style={styles.saveButton} onPress={handleSaveRoutine} disabled={loading}>
           {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save Routine</Text>}
         </TouchableOpacity>
-      </ScrollView>
+      </FormContainer>
     </ThemeProvider>
   );
 };
