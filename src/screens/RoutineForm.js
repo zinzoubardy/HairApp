@@ -96,7 +96,7 @@ const AddStepButton = styled.TouchableOpacity`
 const RemoveStepButton = styled.TouchableOpacity`
   background-color: ${props => props.theme.colors.error};
   padding: ${props => props.theme.spacing.xs}px ${props => props.theme.spacing.sm}px; /* Adjusted padding */
-  border-radius: ${props => props.theme.borderRadius.xs}px;
+  border-radius: ${props => props.theme.borderRadius.sm}px; /* Changed from xs to sm */
   align-items: center;
   align-self: flex-end;
   margin-top: ${props => props.theme.spacing.sm}px;
