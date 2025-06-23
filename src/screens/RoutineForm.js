@@ -28,9 +28,25 @@ const InputLabel = styled.Text`
   margin-bottom: ${props => props.theme.spacing.xs}px;
   margin-top: ${props => props.theme.spacing.md}px;
 `;
+
+// Define StyledInput ONCE, with .attrs for placeholderTextColor
+const StyledInput = styled.TextInput.attrs(props => ({
+  placeholderTextColor: props.theme.colors.textSecondary,
+}))`
+  background-color: ${props => props.theme.colors.surface};
+  color: ${props => props.theme.colors.textPrimary}; // Actual text color
+  padding: ${props => props.theme.spacing.md}px;
+  border-radius: ${props => props.theme.borderRadius.sm}px;
+  border: 1px solid ${props => props.theme.colors.border};
+  font-size: ${props => props.theme.typography.body.fontSize}px;
+`;
+
+// StyledMultilineInput inherits from the correctly defined StyledInput
+const StyledMultilineInput = styled(StyledInput)`
+  min-height: 100px;
+  text-align-vertical: top; /* For Android */
+`;
 /*
-const StyledInput = styled.TextInput.attrs(...)`...`;
-const StyledMultilineInput = styled(StyledInput)`...`;
 const StepsHeaderText = styled(InputLabel)`...`;
 const StepContainer = styled.View`...`;
 const StepInput = styled(StyledInput).attrs(...)`...`;
@@ -219,18 +235,14 @@ const RoutineForm = () => {
         <HeaderText>{existingRoutine ? 'Edit Routine' : 'Create New Routine'}</HeaderText>
 
         <InputLabel>Title*</InputLabel>
-        <TextInput
-          style={styles.styledInput}
-          placeholderTextColor={theme.colors.textSecondary}
+        <StyledInput
           placeholder="e.g., My Wash Day Routine"
           value={title}
           onChangeText={setTitle}
         />
 
         <InputLabel>Description</InputLabel>
-        <TextInput
-          style={[styles.styledInput, styles.styledMultilineInput]}
-          placeholderTextColor={theme.colors.textSecondary}
+        <StyledMultilineInput
           placeholder="A brief description of this routine"
           value={description}
           onChangeText={setDescription}
@@ -238,9 +250,7 @@ const RoutineForm = () => {
         />
 
         <InputLabel>Routine Type</InputLabel>
-        <TextInput
-          style={styles.styledInput}
-          placeholderTextColor={theme.colors.textSecondary}
+        <StyledInput
           placeholder="e.g., Wash Day, Daily, Treatment"
           value={routineType}
           onChangeText={setRoutineType}
