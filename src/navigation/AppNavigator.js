@@ -30,6 +30,9 @@ const defaultStackScreenOptions = {
 
 import { TouchableOpacity, View, StyleSheet } from "react-native"; // Added for custom button
 
+// A dummy component that renders nothing, for tabs that are action buttons
+const EmptyScreen = () => null;
+
 // This will be the main navigator after login, containing tabs
 const MainTabNavigator = () => {
   return (
@@ -67,7 +70,7 @@ const MainTabNavigator = () => {
       {/* Central Action Button Tab */}
       <Tab.Screen
         name="AnalyzePlaceholder"
-        component={() => null} // No actual screen, it's just for the button
+        component={EmptyScreen} // Use the defined EmptyScreen component
         options={({ navigation }) => ({
           tabBarLabel: () => null, // No label
           tabBarIcon: ({color}) => ( // A placeholder, actual button is below
