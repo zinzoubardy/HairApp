@@ -10,6 +10,7 @@ The application is currently in an active development phase. The core infrastruc
 *   **User Authentication:** Secure sign-up, sign-in, and sign-out functionality using Supabase.
 *   **Basic Navigation:** A structured navigation flow for authenticated users.
 *   **AI Hair Advisor (Text-based):** Users can interact with an AI for text-based hair advice via the `HairAIScreen`. This now uses **Together AI (Llama 3.3 model)** for more advanced responses.
+    *   **Important Note on AI Scope:** The AI advisor is designed to provide guidance *only* on hair-related topics and should base its advice *solely* on the user's provided profile details (once fully implemented). It should not respond to requests outside of this scope.
 *   **Profile Management:** Users can view and update basic profile information on `ProfileScreen`.
 *   **Image Upload Foundation:** The `UploadScreen` allows users to select images from their device (cloud upload and analysis are pending).
 *   **Theming:** A new **futuristic and colorful dark theme** has been applied to key screens (`HomeScreen`, `HairAIScreen`) using Styled Components.
