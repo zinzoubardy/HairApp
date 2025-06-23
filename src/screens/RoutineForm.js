@@ -29,25 +29,30 @@ const InputLabel = styled.Text`
   margin-top: ${props => props.theme.spacing.md}px;
 `;
 
-// Define StyledInput ONCE, with .attrs for placeholderTextColor
 const StyledInput = styled.TextInput.attrs(props => ({
   placeholderTextColor: props.theme.colors.textSecondary,
 }))`
   background-color: ${props => props.theme.colors.surface};
-  color: ${props => props.theme.colors.textPrimary}; // Actual text color
+  color: ${props => props.theme.colors.textPrimary};
   padding: ${props => props.theme.spacing.md}px;
   border-radius: ${props => props.theme.borderRadius.sm}px;
-  border: 1px solid ${props => props.theme.colors.border};
+  border-width: 1px;
+  border-color: ${props => props.theme.colors.border};
   font-size: ${props => props.theme.typography.body.fontSize}px;
 `;
 
-// StyledMultilineInput inherits from the correctly defined StyledInput
 const StyledMultilineInput = styled(StyledInput)`
   min-height: 100px;
-  text-align-vertical: top; /* For Android */
+  text-align-vertical: 'top'; /* For Android */
+`;
+
+const StepsHeaderText = styled(InputLabel)`
+  font-size: ${props => props.theme.typography.h2.fontSize}px;
+  color: ${props => props.theme.colors.textPrimary};
+  margin-top: ${props => props.theme.spacing.lg}px;
+  margin-bottom: ${props => props.theme.spacing.sm}px;
 `;
 /*
-const StepsHeaderText = styled(InputLabel)`...`;
 const StepContainer = styled.View`...`;
 const StepInput = styled(StyledInput).attrs(...)`...`;
 const StepTextArea = styled(StyledMultilineInput).attrs(...)`...`;
@@ -256,27 +261,21 @@ const RoutineForm = () => {
           onChangeText={setRoutineType}
         />
 
-        <Text style={styles.stepsHeaderText}>Steps</Text>
+        <StepsHeaderText>Steps</StepsHeaderText>
         {steps.map((step, index) => (
           <View style={styles.stepContainer} key={index}>
             <InputLabel>{`Step ${index + 1}`}</InputLabel>
-            <TextInput
-              style={styles.styledInput}
-              placeholderTextColor={theme.colors.textSecondary}
+            <StyledInput
               placeholder="Action (e.g., Cleanse, Condition)"
               value={step.action}
               onChangeText={(text) => handleStepChange(index, 'action', text)}
             />
-            <TextInput
-              style={styles.styledInput}
-              placeholderTextColor={theme.colors.textSecondary}
+            <StyledInput
               placeholder="Products Used (comma-separated)"
               value={step.products_used} // products_used is now a string in local state
               onChangeText={(text) => handleStepChange(index, 'products_used', text)}
             />
-            <TextInput
-              style={[styles.styledInput, styles.styledMultilineInput]}
-              placeholderTextColor={theme.colors.textSecondary}
+            <StyledMultilineInput
               placeholder="Notes (optional)"
               value={step.notes}
               onChangeText={(text) => handleStepChange(index, 'notes', text)}
