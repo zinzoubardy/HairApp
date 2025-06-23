@@ -101,9 +101,15 @@ const RemoveStepButton = styled.TouchableOpacity`
   align-self: flex-end;
   margin-top: ${props => props.theme.spacing.sm}px;
 `;
-/*
-const SaveButton = styled.TouchableOpacity`...`;
-*/
+
+const SaveButton = styled.TouchableOpacity`
+  background-color: ${props => props.theme.colors.accent};
+  padding: ${props => props.theme.spacing.lg}px;
+  border-radius: ${props => props.theme.borderRadius.md}px;
+  align-items: center;
+  margin-top: ${props => props.theme.spacing.xl}px;
+  margin-bottom: ${props => props.theme.spacing.md}px;
+`;
 
 // Define styles inline for testing
 const styles = StyleSheet.create({
@@ -335,9 +341,9 @@ const RoutineForm = () => {
           <ButtonText>+ Add Another Step</ButtonText>
         </AddStepButton>
 
-        <TouchableOpacity style={styles.saveButton} onPress={handleSaveRoutine} disabled={loading}>
-          {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save Routine</Text>}
-        </TouchableOpacity>
+        <SaveButton onPress={handleSaveRoutine} disabled={loading}>
+          {loading ? <ActivityIndicator color="#fff" /> : <ButtonText>Save Routine</ButtonText>}
+        </SaveButton>
       </FormContainer>
     </ThemeProvider>
   );
