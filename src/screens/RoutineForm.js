@@ -294,7 +294,7 @@ const RoutineForm = () => {
                 <Text style={styles.buttonText}>Remove Step</Text>
               </TouchableOpacity>
             )}
-          </View>
+          </StepContainer>
         ))}
         <TouchableOpacity style={styles.addStepButton} onPress={addStep}>
           <Text style={styles.buttonText}>+ Add Another Step</Text>
