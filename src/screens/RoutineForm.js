@@ -77,10 +77,31 @@ const StepTextArea = styled(StyledMultilineInput).attrs(props => ({
   /* For now, it inherits all styles from StyledMultilineInput */
   margin-bottom: ${props => props.theme.spacing.sm}px; /* Example: add some margin */
 `;
+
+const ButtonText = styled.Text`
+  color: #ffffff; /* Assuming default white text for buttons */
+  font-size: ${props => props.theme.typography.button.fontSize}px;
+  font-weight: ${props => props.theme.typography.button.fontWeight};
+`;
+
+const AddStepButton = styled.TouchableOpacity`
+  background-color: ${props => props.theme.colors.primary};
+  padding: ${props => props.theme.spacing.md}px;
+  border-radius: ${props => props.theme.borderRadius.sm}px;
+  align-items: center;
+  margin-top: ${props => props.theme.spacing.sm}px;
+  margin-bottom: ${props => props.theme.spacing.lg}px;
+`;
+
+const RemoveStepButton = styled.TouchableOpacity`
+  background-color: ${props => props.theme.colors.error};
+  padding: ${props => props.theme.spacing.xs}px ${props => props.theme.spacing.sm}px; /* Adjusted padding */
+  border-radius: ${props => props.theme.borderRadius.xs}px;
+  align-items: center;
+  align-self: flex-end;
+  margin-top: ${props => props.theme.spacing.sm}px;
+`;
 /*
-const AddStepButton = styled.TouchableOpacity`...`;
-const RemoveStepButton = styled.TouchableOpacity`...`;
-const ButtonText = styled.Text`...`;
 const SaveButton = styled.TouchableOpacity`...`;
 */
 
@@ -304,15 +325,15 @@ const RoutineForm = () => {
               multiline
             />
             {steps.length > 1 && (
-              <TouchableOpacity style={styles.removeStepButton} onPress={() => removeStep(index)}>
-                <Text style={styles.buttonText}>Remove Step</Text>
-              </TouchableOpacity>
+              <RemoveStepButton onPress={() => removeStep(index)}>
+                <ButtonText>Remove Step</ButtonText>
+              </RemoveStepButton>
             )}
           </StepContainer>
         ))}
-        <TouchableOpacity style={styles.addStepButton} onPress={addStep}>
-          <Text style={styles.buttonText}>+ Add Another Step</Text>
-        </TouchableOpacity>
+        <AddStepButton onPress={addStep}>
+          <ButtonText>+ Add Another Step</ButtonText>
+        </AddStepButton>
 
         <TouchableOpacity style={styles.saveButton} onPress={handleSaveRoutine} disabled={loading}>
           {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save Routine</Text>}
