@@ -35,6 +35,7 @@
   },
   "devDependencies": {
     "@babel/core": "^7.24.0",
+    "@expo/metro-config": "0.19.5",
     "@types/styled-components-react-native": "^5.2.5",
     "react-native-svg-transformer": "^1.5.1"
   },
