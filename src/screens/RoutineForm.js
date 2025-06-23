@@ -61,9 +61,23 @@ const StepContainer = styled.View`
   border-width: 1px;
   border-color: ${props => props.theme.colors.border};
 `;
+
+const StepInput = styled(StyledInput).attrs(props => ({
+  placeholderTextColor: props.theme.colors.textSecondary,
+}))`
+  /* Add any specific styles for StepInput if different from StyledInput */
+  /* For now, it inherits all styles from StyledInput */
+  margin-bottom: ${props => props.theme.spacing.sm}px; /* Example: add some margin between step inputs */
+`;
+
+const StepTextArea = styled(StyledMultilineInput).attrs(props => ({
+  placeholderTextColor: props.theme.colors.textSecondary,
+}))`
+  /* Add any specific styles for StepTextArea if different from StyledMultilineInput */
+  /* For now, it inherits all styles from StyledMultilineInput */
+  margin-bottom: ${props => props.theme.spacing.sm}px; /* Example: add some margin */
+`;
 /*
-const StepInput = styled(StyledInput).attrs(...)`...`;
-const StepTextArea = styled(StyledMultilineInput).attrs(...)`...`;
 const AddStepButton = styled.TouchableOpacity`...`;
 const RemoveStepButton = styled.TouchableOpacity`...`;
 const ButtonText = styled.Text`...`;
@@ -273,17 +287,17 @@ const RoutineForm = () => {
         {steps.map((step, index) => (
           <StepContainer key={index}>
             <InputLabel>{`Step ${index + 1}`}</InputLabel>
-            <StyledInput
+            <StepInput
               placeholder="Action (e.g., Cleanse, Condition)"
               value={step.action}
               onChangeText={(text) => handleStepChange(index, 'action', text)}
             />
-            <StyledInput
+            <StepInput
               placeholder="Products Used (comma-separated)"
               value={step.products_used} // products_used is now a string in local state
               onChangeText={(text) => handleStepChange(index, 'products_used', text)}
             />
-            <StyledMultilineInput
+            <StepTextArea
               placeholder="Notes (optional)"
               value={step.notes}
               onChangeText={(text) => handleStepChange(index, 'notes', text)}
