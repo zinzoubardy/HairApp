@@ -52,8 +52,16 @@ const StepsHeaderText = styled(InputLabel)`
   margin-top: ${props => props.theme.spacing.lg}px;
   margin-bottom: ${props => props.theme.spacing.sm}px;
 `;
+
+const StepContainer = styled.View`
+  background-color: ${props => props.theme.colors.surfaceVariant};
+  padding: ${props => props.theme.spacing.md}px;
+  border-radius: ${props => props.theme.borderRadius.md}px;
+  margin-bottom: ${props => props.theme.spacing.md}px;
+  border-width: 1px;
+  border-color: ${props => props.theme.colors.border};
+`;
 /*
-const StepContainer = styled.View`...`;
 const StepInput = styled(StyledInput).attrs(...)`...`;
 const StepTextArea = styled(StyledMultilineInput).attrs(...)`...`;
 const AddStepButton = styled.TouchableOpacity`...`;
@@ -263,7 +271,7 @@ const RoutineForm = () => {
 
         <StepsHeaderText>Steps</StepsHeaderText>
         {steps.map((step, index) => (
-          <View style={styles.stepContainer} key={index}>
+          <StepContainer key={index}>
             <InputLabel>{`Step ${index + 1}`}</InputLabel>
             <StyledInput
               placeholder="Action (e.g., Cleanse, Condition)"
