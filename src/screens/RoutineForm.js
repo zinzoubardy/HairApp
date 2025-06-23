@@ -111,93 +111,6 @@ const SaveButton = styled.TouchableOpacity`
   margin-bottom: ${props => props.theme.spacing.md}px;
 `;
 
-// Define styles inline for testing
-const styles = StyleSheet.create({
-  formContainer: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-    // padding: theme.spacing.md, // ScrollView uses contentContainerStyle for inner padding
-  },
-  formContentContainer: {
-    padding: theme.spacing.md,
-    paddingBottom: theme.spacing.xl,
-  },
-  headerText: {
-    fontSize: theme.typography.h1.fontSize,
-    fontWeight: theme.typography.h1.fontWeight,
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.lg,
-    textAlign: 'center',
-  },
-  inputLabel: {
-    fontSize: theme.typography.label.fontSize,
-    color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.xs,
-    marginTop: theme.spacing.md,
-  },
-  styledInput: {
-    backgroundColor: theme.colors.surface,
-    color: theme.colors.textPrimary,
-    padding: theme.spacing.md,
-    borderRadius: theme.borderRadius.sm,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    fontSize: theme.typography.body.fontSize,
-  },
-  styledMultilineInput: {
-    minHeight: 100,
-    textAlignVertical: 'top', // For Android
-    // Inherits other styles from styledInput if spread
-  },
-  stepsHeaderText: {
-    // Similar to inputLabel but with h2 font size and textPrimary color
-    fontSize: theme.typography.h2.fontSize,
-    color: theme.colors.textPrimary,
-    marginTop: theme.spacing.lg,
-    marginBottom: theme.spacing.sm,
-  },
-  stepContainer: {
-    backgroundColor: theme.colors.surfaceVariant,
-    padding: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
-    marginBottom: theme.spacing.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  // StepInput and StepTextArea will use styledInput and styledMultilineInput styles
-  addStepButton: {
-    backgroundColor: theme.colors.primary,
-    padding: theme.spacing.md,
-    borderRadius: theme.borderRadius.sm,
-    alignItems: 'center',
-    marginTop: theme.spacing.sm,
-    marginBottom: theme.spacing.lg,
-  },
-  removeStepButton: {
-    backgroundColor: theme.colors.error,
-    paddingVertical: theme.spacing.xs, // Adjusted padding
-    paddingHorizontal: theme.spacing.sm, // Adjusted padding
-    borderRadius: theme.borderRadius.xs,
-    alignItems: 'center',
-    alignSelf: 'flex-end',
-    marginTop: theme.spacing.sm,
-  },
-  buttonText: {
-    color: '#ffffff',
-    fontSize: theme.typography.button.fontSize,
-    fontWeight: theme.typography.button.fontWeight,
-  },
-  saveButton: {
-    backgroundColor: theme.colors.accent,
-    padding: theme.spacing.lg,
-    borderRadius: theme.borderRadius.md,
-    alignItems: 'center',
-    marginTop: theme.spacing.xl,
-    marginBottom: theme.spacing.md,
-  },
-});
-
-
 const RoutineForm = () => {
   const navigation = useNavigation();
   const route = useRoute();
@@ -285,7 +198,7 @@ const RoutineForm = () => {
 
   return (
     <ThemeProvider theme={theme}>
-      <FormContainer contentContainerStyle={styles.formContentContainer}>
+      <FormContainer contentContainerStyle={{ padding: theme.spacing.md, paddingBottom: theme.spacing.xl }}>
         <HeaderText>{existingRoutine ? 'Edit Routine' : 'Create New Routine'}</HeaderText>
 
         <InputLabel>Title*</InputLabel>
