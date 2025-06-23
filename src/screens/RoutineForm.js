@@ -21,8 +21,14 @@ const HeaderText = styled.Text`
   margin-bottom: ${props => props.theme.spacing.lg}px;
   text-align: center;
 `;
+
+const InputLabel = styled.Text`
+  font-size: ${props => props.theme.typography.label.fontSize}px;
+  color: ${props => props.theme.colors.textSecondary};
+  margin-bottom: ${props => props.theme.spacing.xs}px;
+  margin-top: ${props => props.theme.spacing.md}px;
+`;
 /*
-const InputLabel = styled.Text`...`;
 const StyledInput = styled.TextInput.attrs(...)`...`;
 const StyledMultilineInput = styled(StyledInput)`...`;
 const StepsHeaderText = styled(InputLabel)`...`;
@@ -212,7 +218,7 @@ const RoutineForm = () => {
       <FormContainer contentContainerStyle={styles.formContentContainer}>
         <HeaderText>{existingRoutine ? 'Edit Routine' : 'Create New Routine'}</HeaderText>
 
-        <Text style={styles.inputLabel}>Title*</Text>
+        <InputLabel>Title*</InputLabel>
         <TextInput
           style={styles.styledInput}
           placeholderTextColor={theme.colors.textSecondary}
@@ -221,7 +227,7 @@ const RoutineForm = () => {
           onChangeText={setTitle}
         />
 
-        <Text style={styles.inputLabel}>Description</Text>
+        <InputLabel>Description</InputLabel>
         <TextInput
           style={[styles.styledInput, styles.styledMultilineInput]}
           placeholderTextColor={theme.colors.textSecondary}
@@ -231,7 +237,7 @@ const RoutineForm = () => {
           multiline
         />
 
-        <Text style={styles.inputLabel}>Routine Type</Text>
+        <InputLabel>Routine Type</InputLabel>
         <TextInput
           style={styles.styledInput}
           placeholderTextColor={theme.colors.textSecondary}
@@ -243,7 +249,7 @@ const RoutineForm = () => {
         <Text style={styles.stepsHeaderText}>Steps</Text>
         {steps.map((step, index) => (
           <View style={styles.stepContainer} key={index}>
-            <Text style={styles.inputLabel}>{`Step ${index + 1}`}</Text>
+            <InputLabel>{`Step ${index + 1}`}</InputLabel>
             <TextInput
               style={styles.styledInput}
               placeholderTextColor={theme.colors.textSecondary}
