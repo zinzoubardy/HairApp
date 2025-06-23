@@ -21,9 +21,19 @@ import { getProfile, updateProfile } from "../services/SupabaseService"; // Impo
 
 const ProfileScreen = ({ navigation }) => {
   const { user, signOut, loadingAuthAction } = useAuth();
-  const [name, setName] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [username, setUsername] = useState("");
   const [hairGoal, setHairGoal] = useState("");
   const [allergies, setAllergies] = useState("");
+  // New state for additional hair details
+  const [hairColor, setHairColor] = useState("");
+  const [hairCondition, setHairCondition] = useState("");
+  const [hairConcernsPreferences, setHairConcernsPreferences] = useState("");
+  // States for image URLs (will be simple text inputs for now)
+  const [profilePicUpUrl, setProfilePicUpUrl] = useState("");
+  const [profilePicRightUrl, setProfilePicRightUrl] = useState("");
+  const [profilePicLeftUrl, setProfilePicLeftUrl] = useState("");
+  const [profilePicBackUrl, setProfilePicBackUrl] = useState("");
 
   const [isLoading, setIsLoading] = useState(false); // For initial data load from Supabase
   const [isSaving, setIsSaving] = useState(false);  // For saving data to Supabase
@@ -41,16 +51,34 @@ const ProfileScreen = ({ navigation }) => {
           // Potentially fall back to AsyncStorage or inform user
         }
         if (profileData) {
-          setName(profileData.name || "");
+          setFullName(profileData.full_name || "");
+          setUsername(profileData.username || "");
           setHairGoal(profileData.hair_goal || "");
           setAllergies(profileData.allergies || "");
+          // Load new fields
+          setHairColor(profileData.hair_color || "");
+          setHairCondition(profileData.hair_condition || "");
+          setHairConcernsPreferences(profileData.hair_concerns_preferences || "");
+          setProfilePicUpUrl(profileData.profile_pic_up_url || "");
+          setProfilePicRightUrl(profileData.profile_pic_right_url || "");
+          setProfilePicLeftUrl(profileData.profile_pic_left_url || "");
+          setProfilePicBackUrl(profileData.profile_pic_back_url || "");
         } else {
           // No profile data found on server, could be a new user post-trigger or trigger failed.
           // Initialize with empty strings or load from a local cache if desired.
           console.log("No profile data found on server for user:", user.id);
-          setName("");
+          setFullName("");
+          setUsername("");
           setHairGoal("");
           setAllergies("");
+          // Initialize new fields
+          setHairColor("");
+          setHairCondition("");
+          setHairConcernsPreferences("");
+          setProfilePicUpUrl("");
+          setProfilePicRightUrl("");
+          setProfilePicLeftUrl("");
+          setProfilePicBackUrl("");
         }
       } catch (e) { // Catch any other exceptions
         console.error("Exception during loadProfileData:", e);
@@ -70,9 +98,18 @@ const ProfileScreen = ({ navigation }) => {
     }
 
     const profileDetails = {
-      name,
-      hair_goal: hairGoal, // Ensure snake_case for Supabase column
+      full_name: fullName,
+      username: username,
+      hair_goal: hairGoal,
       allergies,
+      // Add new fields to save
+      hair_color: hairColor,
+      hair_condition: hairCondition,
+      hair_concerns_preferences: hairConcernsPreferences,
+      profile_pic_up_url: profilePicUpUrl,
+      profile_pic_right_url: profilePicRightUrl,
+      profile_pic_left_url: profilePicLeftUrl,
+      profile_pic_back_url: profilePicBackUrl,
     };
 
     setIsSaving(true);
@@ -83,9 +120,18 @@ const ProfileScreen = ({ navigation }) => {
       } else {
         Alert.alert("Profile Saved", "Your profile has been successfully saved to the server!");
         if (data) { // Update local state with any transformations from Supabase (e.g. default values)
-            setName(data.name || "");
+            setFullName(data.full_name || "");
+            setUsername(data.username || "");
             setHairGoal(data.hair_goal || "");
             setAllergies(data.allergies || "");
+            // Update state for new fields from server response
+            setHairColor(data.hair_color || "");
+            setHairCondition(data.hair_condition || "");
+            setHairConcernsPreferences(data.hair_concerns_preferences || "");
+            setProfilePicUpUrl(data.profile_pic_up_url || "");
+            setProfilePicRightUrl(data.profile_pic_right_url || "");
+            setProfilePicLeftUrl(data.profile_pic_left_url || "");
+            setProfilePicBackUrl(data.profile_pic_back_url || "");
         }
       }
     } catch (e) { // Catch any other exceptions
@@ -145,13 +191,22 @@ const ProfileScreen = ({ navigation }) => {
         </Text>
 
         <View style={styles.inputGroup}>
-          <Text style={{...styles.label, fontFamily: theme.fonts.body, color: theme.colors.textPrimary}}>Name (Optional)</Text>
+          <Text style={{...styles.label, fontFamily: theme.fonts.body, color: theme.colors.textPrimary}}>Username</Text>
+          <TextInput
+            style={{...styles.input, fontFamily: theme.fonts.body, color: theme.colors.textSecondary, backgroundColor: theme.colors.background}} // Make it look non-editable
+            value={username}
+            editable={false} // Username is typically not changed here
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={{...styles.label, fontFamily: theme.fonts.body, color: theme.colors.textPrimary}}>Full Name (Optional)</Text>
           <TextInput
             style={{...styles.input, fontFamily: theme.fonts.body, color: theme.colors.textPrimary}}
-            placeholder="Enter your name"
+            placeholder="Enter your full name"
             placeholderTextColor={theme.colors.textSecondary}
-            value={name}
-            onChangeText={setName}
+            value={fullName}
+            onChangeText={setFullName}
             returnKeyType="next"
             editable={!isSaving && !loadingAuthAction}
           />
@@ -182,6 +237,74 @@ const ProfileScreen = ({ navigation }) => {
             editable={!isSaving && !loadingAuthAction}
           />
         </View>
+
+        {/* New Hair Information Fields */}
+        <View style={styles.sectionTitleContainer}>
+          <Text style={{...styles.sectionTitle, color: theme.colors.textPrimary, fontFamily: theme.fonts.title }}>Detailed Hair Information</Text>
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={{...styles.label, fontFamily: theme.fonts.body, color: theme.colors.textPrimary}}>Hair Color</Text>
+          <TextInput
+            style={{...styles.input, fontFamily: theme.fonts.body, color: theme.colors.textPrimary}}
+            placeholder="e.g., Dark Brown, Blonde with highlights"
+            placeholderTextColor={theme.colors.textSecondary}
+            value={hairColor}
+            onChangeText={setHairColor}
+            returnKeyType="next"
+            editable={!isSaving && !loadingAuthAction}
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={{...styles.label, fontFamily: theme.fonts.body, color: theme.colors.textPrimary}}>Hair Condition</Text>
+          <TextInput
+            style={{...styles.input, fontFamily: theme.fonts.body, color: theme.colors.textPrimary}}
+            placeholder="e.g., Dry, Oily, Healthy, Damaged ends"
+            placeholderTextColor={theme.colors.textSecondary}
+            value={hairCondition}
+            onChangeText={setHairCondition}
+            returnKeyType="next"
+            editable={!isSaving && !loadingAuthAction}
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={{...styles.label, fontFamily: theme.fonts.body, color: theme.colors.textPrimary}}>Hair Concerns & Preferences</Text>
+          <TextInput
+            style={{...styles.input, ...styles.textArea, fontFamily: theme.fonts.body, color: theme.colors.textPrimary}}
+            placeholder="e.g., Frizz control, prefer wash-n-go styles, want more volume"
+            placeholderTextColor={theme.colors.textSecondary}
+            value={hairConcernsPreferences}
+            onChangeText={setHairConcernsPreferences}
+            multiline
+            numberOfLines={3}
+            returnKeyType="done"
+            editable={!isSaving && !loadingAuthAction}
+          />
+        </View>
+
+        {/* Placeholder for Image URL Inputs - Actual upload UI will be more complex */}
+        <View style={styles.sectionTitleContainer}>
+          <Text style={{...styles.sectionTitle, color: theme.colors.textPrimary, fontFamily: theme.fonts.title }}>Profile Image URLs (Temporary)</Text>
+        </View>
+        <View style={styles.inputGroup}>
+            <Text style={{...styles.label, fontFamily: theme.fonts.body, color: theme.colors.textPrimary}}>Picture URL (Up)</Text>
+            <TextInput style={{...styles.input, fontFamily: theme.fonts.body, color: theme.colors.textPrimary}} value={profilePicUpUrl} onChangeText={setProfilePicUpUrl} placeholder="URL for 'up' angle picture" placeholderTextColor={theme.colors.textSecondary} editable={!isSaving && !loadingAuthAction} />
+        </View>
+        <View style={styles.inputGroup}>
+            <Text style={{...styles.label, fontFamily: theme.fonts.body, color: theme.colors.textPrimary}}>Picture URL (Right Side)</Text>
+            <TextInput style={{...styles.input, fontFamily: theme.fonts.body, color: theme.colors.textPrimary}} value={profilePicRightUrl} onChangeText={setProfilePicRightUrl} placeholder="URL for 'right side' angle picture" placeholderTextColor={theme.colors.textSecondary} editable={!isSaving && !loadingAuthAction} />
+        </View>
+        <View style={styles.inputGroup}>
+            <Text style={{...styles.label, fontFamily: theme.fonts.body, color: theme.colors.textPrimary}}>Picture URL (Left Side)</Text>
+            <TextInput style={{...styles.input, fontFamily: theme.fonts.body, color: theme.colors.textPrimary}} value={profilePicLeftUrl} onChangeText={setProfilePicLeftUrl} placeholder="URL for 'left side' angle picture" placeholderTextColor={theme.colors.textSecondary} editable={!isSaving && !loadingAuthAction} />
+        </View>
+        <View style={styles.inputGroup}>
+            <Text style={{...styles.label, fontFamily: theme.fonts.body, color: theme.colors.textPrimary}}>Picture URL (Back)</Text>
+            <TextInput style={{...styles.input, fontFamily: theme.fonts.body, color: theme.colors.textPrimary}} value={profilePicBackUrl} onChangeText={setProfilePicBackUrl} placeholder="URL for 'back' angle picture" placeholderTextColor={theme.colors.textSecondary} editable={!isSaving && !loadingAuthAction} />
+        </View>
+
 
         <TouchableOpacity
           style={{...styles.button, backgroundColor: isSaving || loadingAuthAction ? theme.colors.border : theme.colors.primary}}
@@ -269,6 +392,17 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSizes.md,
     fontWeight: "bold",
   },
+  sectionTitleContainer: {
+    marginTop: theme.spacing.lg,
+    marginBottom: theme.spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+    paddingBottom: theme.spacing.sm,
+  },
+  sectionTitle: {
+    fontSize: theme.fontSizes.lg,
+    fontWeight: "bold",
+  }
 });
 
 export default ProfileScreen;

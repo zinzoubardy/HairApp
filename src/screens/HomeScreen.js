@@ -41,6 +41,14 @@ const HomeScreen = ({ navigation }) => {
       screen: "Routine", // Navigate to RoutineScreen
       gradientColors: [theme.colors.primary, theme.colors.secondary], // Violet to Teal
     },
+    {
+      id: "hairAnalysis",
+      title: "AI Hair Analysis",
+      description: "Get a detailed analysis of your hair",
+      icon: "analytics-outline",
+      screen: "AnalysisResult", // Navigate to AnalysisResultScreen
+      gradientColors: [theme.colors.secondary, theme.colors.accent], // Teal to Magenta
+    },
   ];
 
   // Calculate paddingTop dynamically within the component
