@@ -4,7 +4,7 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext.js";
 import AppNavigator from "./navigation/AppNavigator.js";
 import AuthScreen from "./screens/AuthScreen.js";
 import { StatusBar } from "expo-status-bar";
-import { View, ActivityIndicator, StyleSheet } from "react-native";
+import { View, ActivityIndicator, StyleSheet, Platform } from "react-native"; // Explicitly import Platform
 import theme from "./styles/theme.js";
 
 const AppContent = () => {
