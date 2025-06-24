@@ -27,7 +27,7 @@
     "react-native-safe-area-context": "5.4.0",
     "react-native-screens": "~4.11.1",
     "react-native-svg": "^15.11.2",
-    "react-native-url-polyfill": "^2.0.0",
+    // "react-native-url-polyfill": "^2.0.0", // Temporarily removed for debugging Platform error
     "react-native-vector-icons": "^10.1.0",
     "styled-components": "^6.1.19",
     "together-ai": "^0.16.0",
