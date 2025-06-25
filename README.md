@@ -154,4 +154,60 @@ The `sql/` directory contains scripts to help set up necessary database tables, 
 *   Always review SQL scripts before running them on your database.
 *   For storage policies (`03_storage_hair_images_policies.sql`), ensure the bucket (`user.hair.images`) exists in your Supabase project. Creating policies via the Supabase Dashboard UI is often a good alternative or primary method for storage RLS. If running the SQL directly for storage policies fails due to permissions (e.g., "must be owner of relation objects"), using the Supabase UI is recommended.
 *   These scripts assume standard Supabase setup and `auth.uid()` for user identification.
+
+## Known Build/Runtime Issues & Troubleshooting (Expo SDK 53)
+
+This project, particularly when targeting Expo SDK 53, has encountered persistent build and runtime errors in some development environments. If you face similar issues, this section documents what has been observed and attempted.
+
+**Observed Errors:**
+
+1.  **Metro Bundler Internal Module Error:**
+    *   `Error: Cannot find module 'metro/src/ModuleGraph/worker/importLocationsPlugin'`
+    *   This error indicates that the Metro bundler is unable to find one of its own internal modules. It typically occurs during the bundling phase when starting the development server (`npx expo start`).
+    *   The error trace often points to `@expo/metro-config` (sometimes a version nested within the `expo` package's own `node_modules`).
+
+2.  **React Native Platform/PlatformConstants Not Found:**
+    *   `ReferenceError: Property 'Platform' doesn't exist`
+    *   Or a more specific TurboModule variant: `TurboModuleRegistry.getEnforcing(...):'PlatformConstants' could not be found. Verify that a module by this name is registered in the native binary.`
+    *   This error occurs at runtime when the JavaScript bundle executes on the device/emulator. It means that core React Native native modules, which provide the `Platform` API, are not being correctly registered or linked.
+
+**Troubleshooting Steps Attempted (Without Full Resolution in one specific test environment):**
+
+*   **Dependency Version Alignment for Expo SDK 53:**
+    *   Ensured `package.json` uses versions compatible with Expo SDK 53:
+        *   `"expo": "^53.0.12"`
+        *   `"react": "18.2.0"`
+        *   `"react-native": "0.74.2"`
+        *   `"@types/react": "~18.2.79"`
+*   **Explicit Metro Tooling Versions:**
+    *   Pinned versions in `devDependencies` to those expected by Expo SDK 53:
+        *   `"@expo/metro-config": "0.19.5"`
+        *   `"metro": "0.80.8"`
+        *   `"metro-config": "0.80.8"`
+*   **Clean Installation Procedures:**
+    *   Repeatedly deleting `node_modules`, `package-lock.json`, and `yarn.lock`.
+    *   Reinstalling dependencies using both `npm install --legacy-peer-deps` and `yarn install`.
+    *   Starting the development server with cache clearing: `npx expo start -c`.
+*   **Code Adjustments:**
+    *   Ensuring `import 'react-native-gesture-handler';` is the first line in `index.js`.
+    *   Explicitly importing `Platform` from `react-native` in `App.tsx`.
+    *   Temporarily removing `react-native-url-polyfill` to rule out interference.
+*   **User-side Expo CLI and Metro Overrides (that temporarily got Metro to start but led to `PlatformConstants` error):**
+    *   `npx expo install react react-dom`
+    *   `npm install -g @expo/cli@latest`
+    *   `npx expo install --fix`
+    *   `yarn add metro@latest @expo/metro-config@latest` (This got the bundler to start but then hit runtime `PlatformConstants` errors, suggesting these `@latest` versions were too new for RN `0.74.x`).
+
+**Recommendations if Issues Persist:**
+
+*   **Node.js LTS Version:** Strongly recommend using a Node.js LTS version (e.g., 18.x or 20.x). Node 22.x (a "Current" release) was identified as a potential source of instability in one instance. Ensure you are on an LTS version and reinstall `node_modules` after switching.
+*   **Global Caches:** Clear all relevant global caches:
+    *   NPM: `npm cache clean --force`
+    *   Yarn v1: `yarn cache clean`, Yarn Berry: `yarn cache clean --all`
+    *   Metro: Delete `$TMPDIR/metro-cache` (macOS) or `~/.metro-cache`.
+    *   Expo: Delete `~/.expo`.
+    *   Watchman (if installed): `watchman watch-del-all && watchman shutdown-server`.
+*   **Global Expo CLI:** Ensure your global `@expo/cli` is up-to-date (`npm install -g @expo/cli` or `yarn global add @expo/cli`).
+*   **Fresh Project Test:** Create a brand new minimal Expo SDK 53 project (`npx create-expo-app TestProject --template blank`) on the problematic machine with an LTS Node version. If this new project also fails with similar errors, it points to a deeper issue with the local development environment setup for SDK 53.
+*   **Expo Community/Support:** If problems persist on a clean project with an LTS Node version, consider seeking help on Expo forums or GitHub issues, providing detailed information about your environment (OS, Node version, npm/yarn versions, Expo CLI version, exact error messages, and steps to reproduce).
 ```
