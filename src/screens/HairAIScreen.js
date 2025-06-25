@@ -12,8 +12,8 @@ import {
   // Platform // Commented out
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { getAIHairstyleAdvice } from '../services/AIService.js';
-import theme from '../styles/theme.js';
+import { getAIHairstyleAdvice } from '../services/AIService';
+import theme from '../styles/theme';
 
 const HairAIScreen = () => {
   const [prompt, setPrompt] = useState('');

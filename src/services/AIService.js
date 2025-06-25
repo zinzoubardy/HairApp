@@ -1,7 +1,7 @@
-import Together from "together-ai";
-import { TOGETHER_AI_API_KEY } from "../config/apiKeys.js";
+import { TOGETHER_AI_API_KEY } from "../config/apiKeys";
+// import Together from "together-ai";
 
-const together = new Together({ apiKey: TOGETHER_AI_API_KEY });
+// const together = new Together({ apiKey: TOGETHER_AI_API_KEY });
 
 export const getAIHairstyleAdvice = async (prompt) => {
   if (!prompt || typeof prompt !== 'string' || prompt.trim() === "") {
@@ -9,17 +9,18 @@ export const getAIHairstyleAdvice = async (prompt) => {
   }
   try {
     console.log("Sending prompt to Together AI:", prompt);
-    const response = await together.chat.completions.create({
-      messages: [{ role: "user", content: prompt }],
-      model: "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free",
-    });
-    console.log("Received response from Together AI:", response);
-    if (response && response.choices && response.choices[0] && response.choices[0].message) {
-      return { success: true, data: response.choices[0].message.content };
-    } else {
-      console.error("Unexpected response structure from Together AI:", response);
-      return { success: false, error: "Failed to parse AI response." };
-    }
+    // const response = await together.chat.completions.create({
+    //   messages: [{ role: "user", content: prompt }],
+    //   model: "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free",
+    // });
+    // console.log("Received response from Together AI:", response);
+    // if (response && response.choices && response.choices[0] && response.choices[0].message) {
+    //   return { success: true, data: response.choices[0].message.content };
+    // } else {
+    //   console.error("Unexpected response structure from Together AI:", response);
+    //   return { success: false, error: "Failed to parse AI response." };
+    // }
+    return { success: true, data: "AI service temporarily disabled for debugging." };
   } catch (error) {
     console.error("Error calling Together AI API:", error);
     return { success: false, error: error.message || "An unknown error occurred with the AI service." };
@@ -91,18 +92,19 @@ export const getHairAnalysis = async (profileData, imageReferences) => {
 
   try {
     console.log("Sending hair analysis prompt to Together AI:", prompt);
-    const response = await together.chat.completions.create({
-      messages: [{ role: "user", content: prompt }],
-      model: "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free", // Using the specified model
-      // Consider adding max_tokens if you want to control response length, e.g., max_tokens: 500
-    });
-    console.log("Received hair analysis response from Together AI:", response);
-    if (response && response.choices && response.choices[0] && response.choices[0].message) {
-      return { success: true, data: response.choices[0].message.content };
-    } else {
-      console.error("Unexpected response structure from Together AI for hair analysis:", response);
-      return { success: false, error: "Failed to parse AI hair analysis response." };
-    }
+    // const response = await together.chat.completions.create({
+    //   messages: [{ role: "user", content: prompt }],
+    //   model: "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free", // Using the specified model
+    //   // Consider adding max_tokens if you want to control response length, e.g., max_tokens: 500
+    // });
+    // console.log("Received hair analysis response from Together AI:", response);
+    // if (response && response.choices && response.choices[0] && response.choices[0].message) {
+    //   return { success: true, data: response.choices[0].message.content };
+    // } else {
+    //   console.error("Unexpected response structure from Together AI for hair analysis:", response);
+    //   return { success: false, error: "Failed to parse AI hair analysis response." };
+    // }
+    return { success: true, data: "AI hair analysis temporarily disabled for debugging." };
   } catch (error) {
     console.error("Error calling Together AI API for hair analysis:", error);
     return { success: false, error: error.message || "An unknown error occurred with the AI analysis service." };

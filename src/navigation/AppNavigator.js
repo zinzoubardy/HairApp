@@ -2,6 +2,7 @@ import React from "react";
 import { createStackNavigator } from "@react-navigation/stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { TouchableOpacity, View, StyleSheet, Platform } from "react-native";
 
 import HomeScreen from "../screens/HomeScreen"; // Will be the new Dashboard
 import UploadScreen from "../screens/UploadScreen";
@@ -28,8 +29,6 @@ const defaultStackScreenOptions = {
   },
 };
 
-import { TouchableOpacity, View, StyleSheet } from "react-native"; // Added for custom button
-
 // A dummy component that renders nothing, for tabs that are action buttons
 const EmptyScreen = () => null;
 
@@ -48,10 +47,8 @@ const MainTabNavigator = () => {
             iconName = focused ? 'chatbubbles' : 'chatbubbles-outline';
           } else if (route.name === 'Menu') {
             iconName = focused ? 'menu' : 'menu-outline';
-          } else if (route.name === 'AnalyzePlaceholder') { // For the central button
-            // This icon won't actually be shown due to tabBarButton overriding
-            // but good to have a placeholder.
-            iconName = 'aperture-outline';
+          } else if (route.name === 'Analyse') {
+            iconName = focused ? 'aperture' : 'aperture-outline';
           }
           return <Ionicons name={iconName} size={size} color={color} />;
         },
@@ -67,29 +64,7 @@ const MainTabNavigator = () => {
     >
       <Tab.Screen name="Dashboard" component={HomeScreen} />
       <Tab.Screen name="Routines" component={RoutineScreen} />
-      {/* Central Action Button Tab */}
-      <Tab.Screen
-        name="AnalyzePlaceholder"
-        component={EmptyScreen} // Use the defined EmptyScreen component
-        options={({ navigation }) => ({
-          tabBarLabel: () => null, // No label
-          tabBarIcon: ({color}) => ( // A placeholder, actual button is below
-            <Ionicons name="aperture-outline" size={30} color={color} />
-          ),
-          tabBarButton: (props) => (
-            <TouchableOpacity
-              style={styles.actionButtonContainer}
-              onPress={() => {
-                navigation.navigate('Dashboard', { refreshTimestamp: Date.now() });
-              }}
-            >
-              <View style={styles.actionButton}>
-                <Ionicons name="analytics-outline" size={32} color={theme.colors.card} />
-              </View>
-            </TouchableOpacity>
-          ),
-        })}
-      />
+      <Tab.Screen name="Analyse" component={UploadScreen} />
       <Tab.Screen name="AI Advisor" component={HairAIScreen} />
       <Tab.Screen name="Menu" component={MenuScreen} />
     </Tab.Navigator>

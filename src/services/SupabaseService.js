@@ -1,13 +1,11 @@
 import { createClient } from "@supabase/supabase-js";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@env';
 // Import AsyncStorage if you decide to use it for auth persistence explicitly, though Supabase handles it by default in React Native.
 // import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // Ideally, these would come from environment variables
 // For example, using react-native-dotenv:
 // import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@env";
-
-const SUPABASE_URL = "https://rsttygxdlrbkplebzhxm.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzdHR5Z3hkbHJia3BsZWJ6aHhtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkwNzk5OTksImV4cCI6MjA2NDY1NTk5OX0.UqaPHbaJYaNdTO1cJP7WG7LtcUw6sWYpgzv-HXBOCQQ";
 
 // Basic error checking for the keys
 if (!SUPABASE_URL) {
@@ -20,7 +18,7 @@ if (!SUPABASE_ANON_KEY) {
 // Initialize the Supabase client
 // Note: Supabase JS V2 automatically uses AsyncStorage in React Native environments.
 // Explicitly passing AsyncStorage is generally not needed unless you have specific advanced requirements.
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     // storage: AsyncStorage, // Not typically needed for React Native with Supabase V2+
     autoRefreshToken: true,

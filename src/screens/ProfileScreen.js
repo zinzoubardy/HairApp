@@ -17,8 +17,17 @@ import theme from "../styles/theme";
 import { useAuth } from "../contexts/AuthContext";
 // Added uploadProfileImage to imports
 import { getProfile, updateProfile, uploadProfileImage } from "../services/SupabaseService";
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { getHairAnalysis, saveHairAnalysisResult } from '../services/AIService';
 
 // const PROFILE_DATA_KEY = "@HairNatureAI_ProfileData"; // Keep for potential local-only settings or fallback
+
+const HAIR_IMAGE_SLOTS = [
+  { angle: 'up', label: 'Top View', icon: 'arrow-up-bold-circle', description: 'Photo of the top of your head' },
+  { angle: 'back', label: 'Back View', icon: 'arrow-down-bold-circle', description: 'Photo of the back of your head' },
+  { angle: 'left', label: 'Left View', icon: 'arrow-left-bold-circle', description: 'Photo of the left side of your head' },
+  { angle: 'right', label: 'Right View', icon: 'arrow-right-bold-circle', description: 'Photo of the right side of your head' },
+];
 
 const ProfileScreen = ({ navigation }) => {
   const { user, signOut, loadingAuthAction } = useAuth();
@@ -164,46 +173,99 @@ const ProfileScreen = ({ navigation }) => {
   };
 
   const handlePickAndUploadImage = async (angle) => {
+    console.log('Upload button pressed for angle:', angle); // Debug log
     if (!user) {
       Alert.alert("Not Logged In", "You must be logged in to upload images.");
       return;
     }
 
-    // No permissions request is necessary for launching the image library
+    // Request permissions on button press (for reliability)
+    let permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (permissionResult.status !== 'granted') {
+      Alert.alert('Permission Denied', 'Sorry, we need camera roll permissions to make this work!');
+      return;
+    }
+
     let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ImagePicker.MediaTypeOptions.Images, // Correct for SDK 52
       allowsEditing: true,
-      aspect: [4, 3], // Example aspect ratio, adjust as needed
-      quality: 0.7, // Compress image slightly
+      aspect: [4, 3],
+      quality: 0.7,
     });
+    console.log('ImagePicker result:', result); // Debug log
 
-    if (!result.canceled && result.assets && result.assets.length > 0) {
-      const fileUri = result.assets[0].uri;
-      setUploadingAngle(angle); // Show loading indicator for this angle
-      try {
-        const { data: uploadData, error: uploadError } = await uploadProfileImage(user.id, fileUri, angle);
+    if (result.cancelled || !result.assets || result.assets.length === 0) {
+      Alert.alert('No Image Selected', 'You did not select any image.');
+      return;
+    }
 
-        if (uploadError) {
-          Alert.alert("Upload Error", `Could not upload ${angle} image: ${uploadError.message}`);
-        } else if (uploadData && uploadData.publicUrl) {
-          // Update the correct state based on the angle
-          switch (angle) {
-            case "up": setProfilePicUpUrl(uploadData.publicUrl); break;
-            case "right": setProfilePicRightUrl(uploadData.publicUrl); break;
-            case "left": setProfilePicLeftUrl(uploadData.publicUrl); break;
-            case "back": setProfilePicBackUrl(uploadData.publicUrl); break;
-            default: break;
-          }
-          Alert.alert("Upload Success", `${angle.charAt(0).toUpperCase() + angle.slice(1)} image uploaded! Remember to save your profile to keep this change.`);
-        }
-      } catch (e) {
-        Alert.alert("Upload Exception", `An error occurred: ${e.message}`);
-      } finally {
-        setUploadingAngle(null); // Hide loading indicator
+    const fileUri = result.assets[0].uri;
+    setUploadingAngle(angle); // Show loading indicator for this angle
+    try {
+      const { data: uploadData, error: uploadError } = await uploadProfileImage(user.id, fileUri, angle);
+
+      if (uploadError) {
+        Alert.alert('Upload Error', uploadError.message || 'Failed to upload image.');
+        setUploadingAngle(null);
+        return;
       }
+      if (uploadData && uploadData.publicUrl) {
+        switch (angle) {
+          case "up": setProfilePicUpUrl(uploadData.publicUrl); break;
+          case "right": setProfilePicRightUrl(uploadData.publicUrl); break;
+          case "left": setProfilePicLeftUrl(uploadData.publicUrl); break;
+          case "back": setProfilePicBackUrl(uploadData.publicUrl); break;
+          default: break;
+        }
+        Alert.alert("Upload Success", `${angle.charAt(0).toUpperCase() + angle.slice(1)} image uploaded! Remember to save your profile to keep this change.`);
+      }
+    } catch (e) {
+      if (e.message && e.message.includes('Network request failed')) {
+        Alert.alert("Network Error", "Could not upload image. Please check your internet connection, Supabase URL, and that your device can reach your Supabase project. If on a real device, Supabase must be accessible from the public internet.");
+      } else {
+        Alert.alert("Upload Exception", `An error occurred: ${e.message}`);
+      }
+    } finally {
+      setUploadingAngle(null); // Hide loading indicator
     }
   };
 
+  // Helper to check if all images are uploaded
+  const allImagesUploaded = (profilePicUpUrl && profilePicBackUrl && profilePicLeftUrl && profilePicRightUrl);
+
+  // After uploading an image, check if all are present and trigger AI analysis
+  useEffect(() => {
+    const runAnalysis = async () => {
+      if (allImagesUploaded && user) {
+        setIsLoading(true);
+        const imageReferences = {
+          up: profilePicUpUrl,
+          back: profilePicBackUrl,
+          left: profilePicLeftUrl,
+          right: profilePicRightUrl,
+        };
+        const profileData = {
+          hair_goal: hairGoal,
+          allergies,
+          hair_color: hairColor,
+          hair_condition: hairCondition,
+          hair_concerns_preferences: hairConcernsPreferences,
+        };
+        const { success, data } = await getHairAnalysis(profileData, imageReferences);
+        if (success) {
+          // Optionally save to DB
+          await saveHairAnalysisResult(user.id, data, imageReferences);
+          // Optionally notify dashboard to refresh (could use context or navigation param)
+          Alert.alert('Analysis Complete', 'Your hair analysis is ready! Check your dashboard.');
+        } else {
+          Alert.alert('AI Analysis Failed', 'Could not analyze your hair. Please try again.');
+        }
+        setIsLoading(false);
+      }
+    };
+    runAnalysis();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profilePicUpUrl, profilePicBackUrl, profilePicLeftUrl, profilePicRightUrl]);
 
   if (isLoading && !user) { // Show nothing or a generic loading if user isn't available yet during initial auth check
     return (
@@ -341,32 +403,39 @@ const ProfileScreen = ({ navigation }) => {
 
         {/* Profile Image Upload Section */}
         <View style={styles.sectionTitleContainer}>
-          <Text style={{...styles.sectionTitle, color: theme.colors.textPrimary, fontFamily: theme.fonts.title }}>Your Profile Pictures</Text>
+          <Text style={{...styles.sectionTitle, color: theme.colors.textPrimary, fontFamily: theme.fonts.title }}>Your Hair Images</Text>
         </View>
+        <Text style={{textAlign: 'center', color: theme.colors.textSecondary, marginBottom: theme.spacing.md}}>
+          Upload clear photos of your hair from each angle for best results: Top, Back, Left, and Right.
+        </Text>
         <View style={styles.imageUploadGrid}>
-            {[
-              { angle: "up", label: "Up View", url: profilePicUpUrl, setter: setProfilePicUpUrl },
-              { angle: "right", label: "Right Side", url: profilePicRightUrl, setter: setProfilePicRightUrl },
-              { angle: "left", label: "Left Side", url: profilePicLeftUrl, setter: setProfilePicLeftUrl },
-              { angle: "back", label: "Back View", url: profilePicBackUrl, setter: setProfilePicBackUrl },
-            ].map(img => (
-                <View key={img.angle} style={styles.imageUploadContainer}>
-                    <Text style={{...styles.label, textAlign: 'center', marginBottom: theme.spacing.sm}}>{img.label}</Text>
-                    <TouchableOpacity
-                        style={styles.imagePickerButton}
-                        onPress={() => handlePickAndUploadImage(img.angle)}
-                        disabled={uploadingAngle === img.angle || isSaving}
-                    >
-                        {uploadingAngle === img.angle ? (
-                            <ActivityIndicator size="small" color={theme.colors.primary} />
-                        ) : img.url ? (
-                            <Image source={{ uri: img.url }} style={styles.profileImagePreview} />
-                        ) : (
-                            <Text style={styles.imagePickerButtonText}>Upload</Text>
-                        )}
-                    </TouchableOpacity>
-                </View>
-            ))}
+          {HAIR_IMAGE_SLOTS.map(img => (
+            <View key={img.angle} style={[styles.imageUploadContainer, { alignItems: 'center' }]}>  
+              <MaterialCommunityIcons name={img.icon} size={36} color={theme.colors.primary} style={{marginBottom: 4}} />
+              <Text style={{fontWeight: 'bold', fontSize: 16, marginBottom: 2, color: theme.colors.primary}}>{img.label}</Text>
+              <Text style={{fontSize: 12, color: theme.colors.textSecondary, marginBottom: 6}}>{img.description}</Text>
+              <TouchableOpacity
+                style={[styles.imagePickerButton, { borderColor: theme.colors.primary, borderWidth: 2, borderRadius: 12, backgroundColor: '#f8f8f8' }]}
+                onPress={() => handlePickAndUploadImage(img.angle)}
+                disabled={uploadingAngle === img.angle}
+              >
+                {uploadingAngle === img.angle ? (
+                  <ActivityIndicator size="small" color={theme.colors.primary} />
+                ) : (() => {
+                  if (img.angle === 'up' && profilePicUpUrl) return <Image source={{ uri: profilePicUpUrl }} style={styles.profileImagePreview} />;
+                  if (img.angle === 'back' && profilePicBackUrl) return <Image source={{ uri: profilePicBackUrl }} style={styles.profileImagePreview} />;
+                  if (img.angle === 'left' && profilePicLeftUrl) return <Image source={{ uri: profilePicLeftUrl }} style={styles.profileImagePreview} />;
+                  if (img.angle === 'right' && profilePicRightUrl) return <Image source={{ uri: profilePicRightUrl }} style={styles.profileImagePreview} />;
+                  return (
+                    <View style={{alignItems: 'center'}}>
+                      <Ionicons name="image-outline" size={36} color={theme.colors.primary} style={{marginBottom: 4}} />
+                      <Text style={{color: theme.colors.textSecondary, fontSize: 12}}>Upload</Text>
+                    </View>
+                  );
+                })()}
+              </TouchableOpacity>
+            </View>
+          ))}
         </View>
 
         <TouchableOpacity

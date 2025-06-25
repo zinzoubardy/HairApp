@@ -2,8 +2,8 @@ import React, { useState, useCallback } from 'react';
 import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import styled, { ThemeProvider } from 'styled-components/native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { getRoutines, deleteRoutine } from '../services/SupabaseService.js';
-import theme from '../styles/theme.js';
+import { getRoutines, deleteRoutine } from '../services/SupabaseService';
+import theme from '../styles/theme';
 
 // Styled Components
 const Container = styled.View`
@@ -98,80 +98,71 @@ const LoadingContainer = styled.View`
 `;
 
 const EmptyText = styled.Text`
-  font-size: ${props => props.theme.typography.body.fontSize}px;
   color: ${props => props.theme.colors.textSecondary};
+  font-size: ${props => props.theme.typography.body.fontSize}px;
   text-align: center;
-  margin-top: ${props => props.theme.spacing.lg}px;
+  margin-top: ${props => props.theme.spacing.xl}px;
 `;
 
 const RoutineScreen = () => {
   const navigation = useNavigation();
   const [routines, setRoutines] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const fetchRoutines = useCallback(async () => {
+  const fetchRoutines = async () => {
     setLoading(true);
-    setError(null);
-    const { data, error: fetchError } = await getRoutines();
-    if (fetchError) {
-      setError(fetchError.message);
-      Alert.alert("Error", "Could not fetch routines: " + fetchError.message);
+    const { data, error } = await getRoutines();
+    if (error) {
+      Alert.alert('Error', 'Could not load routines.');
     } else {
       setRoutines(data || []);
     }
     setLoading(false);
-  }, []);
+  };
 
   useFocusEffect(
     useCallback(() => {
       fetchRoutines();
-    }, [fetchRoutines])
+    }, [])
   );
 
-  const navigateToCreateRoutine = () => {
-    navigation.navigate('RoutineForm');
+  const handleDelete = async (id) => {
+    Alert.alert('Delete Routine', 'Are you sure you want to delete this routine?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          const { error } = await deleteRoutine(id);
+          if (error) {
+            Alert.alert('Error', 'Could not delete routine.');
+          } else {
+            fetchRoutines();
+          }
+        },
+      },
+    ]);
   };
 
-  const handleEditRoutine = (routine) => {
+  const handleEdit = (routine) => {
     navigation.navigate('RoutineForm', { routine });
   };
 
-  const handleDeleteRoutine = async (routineId) => {
-    Alert.alert(
-      "Delete Routine",
-      "Are you sure you want to delete this routine?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            setLoading(true);
-            const { error: deleteError } = await deleteRoutine(routineId);
-            setLoading(false);
-            if (deleteError) {
-              Alert.alert("Error", "Could not delete routine: " + deleteError.message);
-            } else {
-              Alert.alert("Success", "Routine deleted successfully.");
-              fetchRoutines();
-            }
-          },
-        },
-      ]
-    );
+  const handleCreate = () => {
+    navigation.navigate('RoutineForm');
   };
 
-  const renderRoutineItem = ({ item }) => (
+  const renderItem = ({ item }) => (
     <RoutineItemContainer>
       <RoutineTitle>{item.title}</RoutineTitle>
-      {item.description && <RoutineDescription>{item.description}</RoutineDescription>}
-      {item.routine_type && <RoutineType>Type: {item.routine_type}</RoutineType>}
+      <RoutineDescription>{item.description}</RoutineDescription>
+      <RoutineType>{item.routine_type}</RoutineType>
       <ButtonGroup>
-        <ActionButton onPress={() => handleEditRoutine(item)}>
+        <ActionButton onPress={() => handleEdit(item)}>
           <ActionButtonText>Edit</ActionButtonText>
         </ActionButton>
-        <DeleteButtonStyled onPress={() => handleDeleteRoutine(item.id)}>
+        <DeleteButtonStyled onPress={() => handleDelete(item.id)}>
           <ActionButtonText>Delete</ActionButtonText>
         </DeleteButtonStyled>
       </ButtonGroup>
@@ -193,25 +184,20 @@ const RoutineScreen = () => {
       <Container>
         <HeaderText>My Routines</HeaderText>
         <CreateButtonContainer>
-          <CreateButton onPress={navigateToCreateRoutine}>
+          <CreateButton onPress={handleCreate}>
             <CreateButtonText>+ Create New Routine</CreateButtonText>
           </CreateButton>
         </CreateButtonContainer>
-
-        {error && routines.length === 0 && (
-          <EmptyText>Error fetching routines: {error}</EmptyText>
-        )}
-
-        {!loading && !error && routines.length === 0 && (
-          <EmptyText>No routines found. Get started by creating one!</EmptyText>
-        )}
-
-        {routines.length > 0 && (
+        {routines.length === 0 ? (
+          <EmptyText>No routines found. Create your first routine!</EmptyText>
+        ) : (
           <FlatList
             data={routines}
-            renderItem={renderRoutineItem}
-            keyExtractor={(item) => item.id.toString()}
-            contentContainerStyle={{ paddingBottom: theme.spacing.lg }}
+            keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
+            renderItem={renderItem}
+            refreshing={refreshing}
+            onRefresh={fetchRoutines}
+            contentContainerStyle={{ paddingBottom: 32 }}
           />
         )}
       </Container>

@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, ActivityIndicator, StyleSheet } from 'react-native';
 import styled, { ThemeProvider } from 'styled-components/native'; // Keep ThemeProvider
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { createRoutine, updateRoutine } from '../services/SupabaseService.js';
-import theme from '../styles/theme.js';
+import { createRoutine, updateRoutine } from '../services/SupabaseService';
+import theme from '../styles/theme';
 
 // All styled.* definitions are commented out for debugging CssSyntaxError
 

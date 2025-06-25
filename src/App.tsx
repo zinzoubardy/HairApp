@@ -1,44 +1,39 @@
 import React from "react";
-import { NavigationContainer } from "@react-navigation/native";
-import { AuthProvider, useAuth } from "./contexts/AuthContext.js";
-import AppNavigator from "./navigation/AppNavigator.js";
-import AuthScreen from "./screens/AuthScreen.js";
-import { StatusBar } from "expo-status-bar";
-import { View, ActivityIndicator, StyleSheet, Platform } from "react-native"; // Explicitly import Platform
-import theme from "./styles/theme.js";
+import { NavigationContainer } from '@react-navigation/native';
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { ActivityIndicator, View } from 'react-native';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import AuthScreen from './screens/AuthScreen';
+import AppNavigator from "./navigation/AppNavigator";
 
-const AppContent = () => {
-  const { user, loadingInitial } = useAuth();
+function Root() {
+  const { user, loadingInitial } = useAuth() || { user: null, loadingInitial: false };
 
   if (loadingInitial) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" />
       </View>
     );
   }
 
-  return user ? <AppNavigator /> : <AuthScreen />;
-};
+  if (!user) {
+    return <AuthScreen />;
+  }
 
-const App = () => {
   return (
     <NavigationContainer>
-      <AuthProvider>
-        <StatusBar style="light" />
-        <AppContent />
-      </AuthProvider>
+      <AppNavigator />
     </NavigationContainer>
   );
-};
+}
 
-const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: theme && theme.colors && theme.colors.background ? theme.colors.background : '#FFFFFF',
-  },
-});
-
-export default App;
+export default function App() {
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <AuthProvider>
+        <Root />
+      </AuthProvider>
+    </GestureHandlerRootView>
+  );
+}
