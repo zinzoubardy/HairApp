@@ -28,8 +28,14 @@
     },
     "extra": {
       "eas": {
-        "projectId": "6b94b516-6ee3-4dfa-889b-17b8732fd3cf"
+        "projectId": "c2b26dd7-eccf-4d7a-8e79-4cede568901e"
       }
-    }
+    },
+    "sdkVersion": "52.0.0",
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ]
   }
 }
