@@ -1,24 +1,38 @@
 const theme = {
   colors: {
-    background: "#0f0e15",
-    primary: "#6e44ff",  // Violet
-    secondary: "#00e5ff", // Teal
-    accent: "#ff2d75",   // Magenta
-    textPrimary: "#F0F0F0", // Light gray for primary text
-    textSecondary: "#A0A0A0", // Medium light gray for secondary text
-    card: "#1C1B2A", // A dark, slightly purplish gray, subtly lighter than background
-    surface: "#1C1B2A", // Added surface, same as card for now, can be different
-    surfaceVariant: "#232233", // Slightly different for step containers
-    border: "#3A3854",  // A border color that fits the scheme
-    error: "#FF5252", // Standard error red
-    success: "#4CAF50", // Standard success green
-    info: "#2196F3", // Standard info blue
+    // Primary Colors
+    primary: "#6D8B74",        // Sage Green – for key CTAs, buttons
+    accent: "#F4A261",         // Clay Peach – for highlights, active tabs, labels
+    accentGlow: "#E9C46A",     // Golden Honey – subtle glow, outlines, visual draws
+    
+    // Background Colors
+    background: "#1A1C1D",     // Futuristic soft black – page & app background
+    surface: "#2A2E2D",        // Deep charcoal – used in cards and modals
+    card: "#2A2E2D",           // Deep charcoal – cards and modals
+    
+    // Text Colors
+    textPrimary: "#FAF9F6",    // Soft Ivory – for all readable text
+    textSecondary: "#B4B8B5",  // For placeholders, hints, captions
+    textMuted: "#B4B8B5",      // For placeholders, hints, captions
+    
+    // Status Colors
+    success: "#A3C9A8",        // Herbal Mint – success states, progress trackers
+    info: "#A3C9A8",           // Herbal Mint – info tags, success badges
+    error: "#E9C46A",          // Golden Honey for errors (soft approach)
+    warning: "#F4A261",        // Clay Peach for warnings
+    
+    // Legacy support (mapped to new colors)
+    secondary: "#F4A261",      // Clay Peach
+    border: "#B4B8B5",         // Muted text color for borders
+    surfaceVariant: "#2A2E2D", // Same as surface
   },
+  
   fonts: {
-    main: "Open Sans", // Retaining Open Sans for main/body
-    title: "Poppins-Bold",
-    body: "Open Sans",
+    main: "Open Sans",         // Body text
+    title: "Poppins-Bold",     // Headers
+    body: "Open Sans",         // Body text
   },
+  
   fontSizes: {
     xs: 12,
     sm: 14,
@@ -29,6 +43,7 @@ const theme = {
     title: 28,
     subTitle: 22,
   },
+  
   spacing: {
     xs: 4,
     sm: 8,
@@ -36,51 +51,87 @@ const theme = {
     lg: 24,
     xl: 32,
   },
+  
   borderRadius: {
-    sm: 4,
-    md: 8,
+    sm: 8,
+    md: 12,
     lg: 16,
+    xl: 20,
   },
-  // Define typography styles combining fonts and fontSizes
+  
+  // Shadows and effects
+  shadows: {
+    soft: {
+      shadowColor: "#E9C46A",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 8,
+      elevation: 4,
+    },
+    medium: {
+      shadowColor: "#E9C46A",
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.15,
+      shadowRadius: 12,
+      elevation: 8,
+    },
+    glow: {
+      shadowColor: "#E9C46A",
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.3,
+      shadowRadius: 10,
+      elevation: 6,
+    }
+  },
+  
+  // Gradients
+  gradients: {
+    primary: ["#6D8B74", "#5A7A61"],
+    accent: ["#F4A261", "#E9C46A"],
+    background: ["#1A1C1D", "#2A2E2D"],
+    card: ["#2A2E2D", "#1A1C1D"],
+    success: ["#A3C9A8", "#8BB894"],
+  },
+  
+  // Typography styles combining fonts and fontSizes
   typography: {
     h1: {
-      fontFamily: "Poppins-Bold", // from theme.fonts.title
-      fontSize: 32,             // from theme.fontSizes.xxl
-      fontWeight: 'bold',       // Standard bold for h1
-      color: "#F0F0F0",          // from theme.colors.textPrimary
+      fontFamily: "Poppins-Bold",
+      fontSize: 32,
+      fontWeight: 'bold',
+      color: "#FAF9F6",
     },
     h2: {
-      fontFamily: "Poppins-Bold", // from theme.fonts.title
-      fontSize: 24,             // from theme.fontSizes.xl
+      fontFamily: "Poppins-Bold",
+      fontSize: 24,
       fontWeight: 'bold',
-      color: "#F0F0F0",
+      color: "#FAF9F6",
     },
     body: {
-      fontFamily: "Open Sans",   // from theme.fonts.body
-      fontSize: 16,             // from theme.fontSizes.md
+      fontFamily: "Open Sans",
+      fontSize: 16,
       fontWeight: 'normal',
-      color: "#F0F0F0",
-      lineHeight: 24,           // Common line height for body text
+      color: "#FAF9F6",
+      lineHeight: 24,
     },
     label: {
       fontFamily: "Open Sans",
-      fontSize: 14,             // from theme.fontSizes.sm
-      fontWeight: '600',        // Semi-bold for labels
-      color: "#A0A0A0",          // from theme.colors.textSecondary
+      fontSize: 14,
+      fontWeight: '600',
+      color: "#B4B8B5",
     },
     button: {
       fontFamily: "Open Sans",
-      fontSize: 16,             // from theme.fontSizes.md
+      fontSize: 16,
       fontWeight: 'bold',
-      color: "#FFFFFF",          // Default for buttons with solid backgrounds
+      color: "#FAF9F6",
     },
     caption: {
       fontFamily: "Open Sans",
-      fontSize: 12,             // from theme.fontSizes.xs
+      fontSize: 12,
       fontWeight: 'normal',
-      color: "#A0A0A0",          // from theme.colors.textSecondary
+      color: "#B4B8B5",
     }
-    // Add other typography styles as needed (e.g., subtitle, link)
   }
 };
 

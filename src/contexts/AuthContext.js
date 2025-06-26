@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "../services/SupabaseService"; // Corrected path
+import { StyleSheet } from "react-native";
+import theme from "../styles/theme";
 
 const AuthContext = createContext(null); // Initialize with null or a default shape
 
@@ -47,24 +49,61 @@ export const AuthProvider = ({ children }) => {
     };
   }, []);
 
-  const signUp = async (email, password) => {
+  const signIn = async (email, password) => {
+    console.log("AuthContext: signIn called with email:", email);
+    console.log("AuthContext: This is the REAL signIn function from AuthContext");
+    console.log("AuthContext: About to set loadingAuthAction to true");
     setLoadingAuthAction(true);
-    const { data, error } = await supabase.auth.signUp({
-      email: email,
-      password: password,
-    });
-    setLoadingAuthAction(false);
-    return { data, error };
+    try {
+      console.log("AuthContext: Calling supabase.auth.signInWithPassword...");
+      
+      // Add a timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Authentication timeout')), 10000); // 10 second timeout
+      });
+      
+      const authPromise = supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      console.log("AuthContext: Waiting for supabase response...");
+      const { data, error } = await Promise.race([authPromise, timeoutPromise]);
+      
+      console.log("AuthContext: Supabase response received");
+      console.log("AuthContext: data:", data);
+      console.log("AuthContext: error:", error);
+      
+      if (error) {
+        console.log("AuthContext: Throwing error:", error.message);
+        throw error;
+      }
+      console.log("AuthContext: Sign in successful");
+      // Navigation will be handled by the navigation stack
+    } catch (error) {
+      console.error("AuthContext: Sign in error:", error.message);
+      throw error;
+    } finally {
+      console.log("AuthContext: Setting loadingAuthAction to false");
+      setLoadingAuthAction(false);
+    }
   };
 
-  const signInWithPassword = async (email, password) => {
+  const signUp = async (email, password) => {
     setLoadingAuthAction(true);
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: email,
-      password: password,
-    });
-    setLoadingAuthAction(false);
-    return { data, error };
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+      if (error) throw error;
+      // Navigation will be handled by the navigation stack
+    } catch (error) {
+      console.error("Sign up error:", error.message);
+      throw error;
+    } finally {
+      setLoadingAuthAction(false);
+    }
   };
 
   const signOut = async () => {
@@ -81,9 +120,24 @@ export const AuthProvider = ({ children }) => {
     loadingInitial,
     loadingAuthAction,
     signUp,
-    signInWithPassword,
+    signIn,
     signOut,
   };
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    loadingText: {
+      color: theme.colors.textPrimary,
+      fontSize: theme.fontSizes.md,
+      fontFamily: theme.fonts.body,
+      marginTop: 16,
+    },
+  });
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

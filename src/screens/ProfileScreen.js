@@ -16,11 +16,9 @@ import * as ImagePicker from 'expo-image-picker'; // Import expo-image-picker
 import theme from "../styles/theme";
 import { useAuth } from "../contexts/AuthContext";
 // Added uploadProfileImage to imports
-import { getProfile, updateProfile, uploadProfileImage } from "../services/SupabaseService";
+import { getProfile, updateProfile, uploadProfileImage, saveHairAnalysisResult } from "../services/SupabaseService";
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { getHairAnalysis, saveHairAnalysisResult } from '../services/AIService';
-
-// const PROFILE_DATA_KEY = "@HairNatureAI_ProfileData"; // Keep for potential local-only settings or fallback
+import { getHairAnalysis } from '../services/AIService';
 
 const HAIR_IMAGE_SLOTS = [
   { angle: 'up', label: 'Top View', icon: 'arrow-up-bold-circle', description: 'Photo of the top of your head' },
@@ -49,6 +47,8 @@ const ProfileScreen = ({ navigation }) => {
   const [isSaving, setIsSaving] = useState(false);  // For saving all profile text data
   const [uploadingAngle, setUploadingAngle] = useState(null); // To show loading on specific image button: "up", "left", etc.
 
+  // Check if all images are uploaded
+  const allImagesUploaded = profilePicUpUrl && profilePicRightUrl && profilePicLeftUrl && profilePicBackUrl;
 
   useEffect(() => {
     // Request permissions when component mounts, can also be done on button press
@@ -155,6 +155,49 @@ const ProfileScreen = ({ navigation }) => {
             setProfilePicLeftUrl(data.profile_pic_left_url || "");
             setProfilePicBackUrl(data.profile_pic_back_url || "");
         }
+        
+        // After successful save, trigger AI analysis if all images are uploaded
+        if (allImagesUploaded) {
+          Alert.alert(
+            "AI Analysis Starting", 
+            "Your profile is saved! Starting AI analysis of your hair images...",
+            [
+              {
+                text: "OK",
+                onPress: async () => {
+                  try {
+                    setIsLoading(true);
+                    const imageReferences = {
+                      up: profilePicUpUrl,
+                      back: profilePicBackUrl,
+                      left: profilePicLeftUrl,
+                      right: profilePicRightUrl,
+                    };
+                    const { success, data: analysisData } = await getHairAnalysis(null, imageReferences);
+                    if (success) {
+                      // Save analysis result to DB
+                      await saveHairAnalysisResult(user.id, analysisData, imageReferences);
+                      Alert.alert('Analysis Complete', 'Your hair analysis is ready! Check your dashboard for personalized recommendations.');
+                    } else {
+                      Alert.alert('AI Analysis Failed', 'Could not analyze your hair. Please try again later.');
+                    }
+                  } catch (error) {
+                    console.error('AI Analysis error:', error);
+                    Alert.alert('AI Analysis Error', 'An error occurred during analysis. Please try again.');
+                  } finally {
+                    setIsLoading(false);
+                  }
+                }
+              }
+            ]
+          );
+        } else {
+          Alert.alert(
+            "Images Needed", 
+            "Please upload all 4 hair images (Top, Back, Left, Right) to get AI analysis.",
+            [{ text: "OK" }]
+          );
+        }
       }
     } catch (e) { // Catch any other exceptions
         console.error("Exception during handleSaveProfile:", e);
@@ -210,11 +253,24 @@ const ProfileScreen = ({ navigation }) => {
         return;
       }
       if (uploadData && uploadData.publicUrl) {
+        console.log(`Setting ${angle} image URL:`, uploadData.publicUrl);
         switch (angle) {
-          case "up": setProfilePicUpUrl(uploadData.publicUrl); break;
-          case "right": setProfilePicRightUrl(uploadData.publicUrl); break;
-          case "left": setProfilePicLeftUrl(uploadData.publicUrl); break;
-          case "back": setProfilePicBackUrl(uploadData.publicUrl); break;
+          case "up": 
+            setProfilePicUpUrl(uploadData.publicUrl); 
+            console.log('Updated profilePicUpUrl state');
+            break;
+          case "right": 
+            setProfilePicRightUrl(uploadData.publicUrl); 
+            console.log('Updated profilePicRightUrl state');
+            break;
+          case "left": 
+            setProfilePicLeftUrl(uploadData.publicUrl); 
+            console.log('Updated profilePicLeftUrl state');
+            break;
+          case "back": 
+            setProfilePicBackUrl(uploadData.publicUrl); 
+            console.log('Updated profilePicBackUrl state');
+            break;
           default: break;
         }
         Alert.alert("Upload Success", `${angle.charAt(0).toUpperCase() + angle.slice(1)} image uploaded! Remember to save your profile to keep this change.`);
@@ -229,43 +285,6 @@ const ProfileScreen = ({ navigation }) => {
       setUploadingAngle(null); // Hide loading indicator
     }
   };
-
-  // Helper to check if all images are uploaded
-  const allImagesUploaded = (profilePicUpUrl && profilePicBackUrl && profilePicLeftUrl && profilePicRightUrl);
-
-  // After uploading an image, check if all are present and trigger AI analysis
-  useEffect(() => {
-    const runAnalysis = async () => {
-      if (allImagesUploaded && user) {
-        setIsLoading(true);
-        const imageReferences = {
-          up: profilePicUpUrl,
-          back: profilePicBackUrl,
-          left: profilePicLeftUrl,
-          right: profilePicRightUrl,
-        };
-        const profileData = {
-          hair_goal: hairGoal,
-          allergies,
-          hair_color: hairColor,
-          hair_condition: hairCondition,
-          hair_concerns_preferences: hairConcernsPreferences,
-        };
-        const { success, data } = await getHairAnalysis(profileData, imageReferences);
-        if (success) {
-          // Optionally save to DB
-          await saveHairAnalysisResult(user.id, data, imageReferences);
-          // Optionally notify dashboard to refresh (could use context or navigation param)
-          Alert.alert('Analysis Complete', 'Your hair analysis is ready! Check your dashboard.');
-        } else {
-          Alert.alert('AI Analysis Failed', 'Could not analyze your hair. Please try again.');
-        }
-        setIsLoading(false);
-      }
-    };
-    runAnalysis();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profilePicUpUrl, profilePicBackUrl, profilePicLeftUrl, profilePicRightUrl]);
 
   if (isLoading && !user) { // Show nothing or a generic loading if user isn't available yet during initial auth check
     return (
@@ -285,41 +304,25 @@ const ProfileScreen = ({ navigation }) => {
   }
 
   return (
-    <KeyboardAvoidingView
+    <KeyboardAvoidingView 
+      style={styles.container} 
       behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={{flex: 1, backgroundColor: theme.colors.background}}
     >
-      <ScrollView
-        contentContainerStyle={styles.container}
-        keyboardShouldPersistTaps="handled"
-      >
-        <Text style={{ ...styles.title, color: theme.colors.textPrimary, fontFamily: theme.fonts.title }}>
-          Your Profile
-        </Text>
+      {/* Logo in top right */}
+      <View style={styles.logoContainer}>
+        <Image source={require('../../assets/splash.png')} style={styles.splashImage} />
+      </View>
 
-        {user && (
-          <Text style={{...styles.emailText, fontFamily: theme.fonts.body, color: theme.colors.textSecondary}}>
-            Logged in as: {user.email}
-          </Text>
-        )}
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <Text style={styles.title}>My Profile</Text>
+        <Text style={styles.subtitle}>Manage your hair profile and preferences</Text>
+        <Text style={styles.emailText}>Email: {user?.email}</Text>
 
-        <Text style={{ ...styles.subtitle, color: theme.colors.textSecondary, fontFamily: theme.fonts.body }}>
-          Manage your hair details and preferences.
-        </Text>
-
+        {/* Profile Details Form */}
         <View style={styles.inputGroup}>
-          <Text style={{...styles.label, fontFamily: theme.fonts.body, color: theme.colors.textPrimary}}>Username</Text>
+          <Text style={styles.label}>Full Name</Text>
           <TextInput
-            style={{...styles.input, fontFamily: theme.fonts.body, color: theme.colors.textSecondary, backgroundColor: theme.colors.background}} // Make it look non-editable
-            value={username}
-            editable={false} // Username is typically not changed here
-          />
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={{...styles.label, fontFamily: theme.fonts.body, color: theme.colors.textPrimary}}>Full Name (Optional)</Text>
-          <TextInput
-            style={{...styles.input, fontFamily: theme.fonts.body, color: theme.colors.textPrimary}}
+            style={styles.input}
             placeholder="Enter your full name"
             placeholderTextColor={theme.colors.textSecondary}
             value={fullName}
@@ -328,11 +331,25 @@ const ProfileScreen = ({ navigation }) => {
             editable={!isSaving && !loadingAuthAction}
           />
         </View>
+
         <View style={styles.inputGroup}>
-          <Text style={{...styles.label, fontFamily: theme.fonts.body, color: theme.colors.textPrimary}}>Primary Hair Goal</Text>
+          <Text style={styles.label}>Username</Text>
           <TextInput
-            style={{...styles.input, fontFamily: theme.fonts.body, color: theme.colors.textPrimary}}
-            placeholder="e.g., Reduce dryness, add volume"
+            style={styles.input}
+            placeholder="Choose a username"
+            placeholderTextColor={theme.colors.textSecondary}
+            value={username}
+            onChangeText={setUsername}
+            returnKeyType="next"
+            editable={!isSaving && !loadingAuthAction}
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Hair Goal</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="e.g., Longer hair, More volume, Healthier scalp"
             placeholderTextColor={theme.colors.textSecondary}
             value={hairGoal}
             onChangeText={setHairGoal}
@@ -340,31 +357,25 @@ const ProfileScreen = ({ navigation }) => {
             editable={!isSaving && !loadingAuthAction}
           />
         </View>
+
         <View style={styles.inputGroup}>
-          <Text style={{...styles.label, fontFamily: theme.fonts.body, color: theme.colors.textPrimary}}>Known Allergies/Sensitivities</Text>
+          <Text style={styles.label}>Allergies & Sensitivities</Text>
           <TextInput
-            style={{...styles.input, ...styles.textArea, fontFamily: theme.fonts.body, color: theme.colors.textPrimary}}
-            placeholder="e.g., Aloe vera, specific essential oils (comma-separated)"
+            style={styles.input}
+            placeholder="e.g., Sulfates, Silicones, Fragrances"
             placeholderTextColor={theme.colors.textSecondary}
             value={allergies}
             onChangeText={setAllergies}
-            multiline
-            numberOfLines={3}
-            returnKeyType="done"
+            returnKeyType="next"
             editable={!isSaving && !loadingAuthAction}
           />
         </View>
 
-        {/* New Hair Information Fields */}
-        <View style={styles.sectionTitleContainer}>
-          <Text style={{...styles.sectionTitle, color: theme.colors.textPrimary, fontFamily: theme.fonts.title }}>Detailed Hair Information</Text>
-        </View>
-
         <View style={styles.inputGroup}>
-          <Text style={{...styles.label, fontFamily: theme.fonts.body, color: theme.colors.textPrimary}}>Hair Color</Text>
+          <Text style={styles.label}>Hair Color</Text>
           <TextInput
-            style={{...styles.input, fontFamily: theme.fonts.body, color: theme.colors.textPrimary}}
-            placeholder="e.g., Dark Brown, Blonde with highlights"
+            style={styles.input}
+            placeholder="e.g., Natural brown, Dyed blonde, Black"
             placeholderTextColor={theme.colors.textSecondary}
             value={hairColor}
             onChangeText={setHairColor}
@@ -374,9 +385,9 @@ const ProfileScreen = ({ navigation }) => {
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={{...styles.label, fontFamily: theme.fonts.body, color: theme.colors.textPrimary}}>Hair Condition</Text>
+          <Text style={styles.label}>Hair Condition</Text>
           <TextInput
-            style={{...styles.input, fontFamily: theme.fonts.body, color: theme.colors.textPrimary}}
+            style={styles.input}
             placeholder="e.g., Dry, Oily, Healthy, Damaged ends"
             placeholderTextColor={theme.colors.textSecondary}
             value={hairCondition}
@@ -387,9 +398,9 @@ const ProfileScreen = ({ navigation }) => {
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={{...styles.label, fontFamily: theme.fonts.body, color: theme.colors.textPrimary}}>Hair Concerns & Preferences</Text>
+          <Text style={styles.label}>Hair Concerns & Preferences</Text>
           <TextInput
-            style={{...styles.input, ...styles.textArea, fontFamily: theme.fonts.body, color: theme.colors.textPrimary}}
+            style={[styles.input, styles.textArea]}
             placeholder="e.g., Frizz control, prefer wash-n-go styles, want more volume"
             placeholderTextColor={theme.colors.textSecondary}
             value={hairConcernsPreferences}
@@ -403,7 +414,7 @@ const ProfileScreen = ({ navigation }) => {
 
         {/* Profile Image Upload Section */}
         <View style={styles.sectionTitleContainer}>
-          <Text style={{...styles.sectionTitle, color: theme.colors.textPrimary, fontFamily: theme.fonts.title }}>Your Hair Images</Text>
+          <Text style={styles.sectionTitle}>Your Hair Images</Text>
         </View>
         <Text style={{textAlign: 'center', color: theme.colors.textSecondary, marginBottom: theme.spacing.md}}>
           Upload clear photos of your hair from each angle for best results: Top, Back, Left, and Right.
@@ -439,27 +450,27 @@ const ProfileScreen = ({ navigation }) => {
         </View>
 
         <TouchableOpacity
-          style={{...styles.button, backgroundColor: isSaving || loadingAuthAction ? theme.colors.border : theme.colors.primary}}
+          style={[styles.button, { backgroundColor: isSaving || loadingAuthAction ? theme.colors.border : theme.colors.primary }]}
           onPress={handleSaveProfile}
           disabled={isSaving || loadingAuthAction || !user} // Disable if not logged in
         >
           {isSaving ? (
             <ActivityIndicator size="small" color={theme.colors.textPrimary} />
           ) : (
-            <Text style={{...styles.buttonText, fontFamily: theme.fonts.body}}>Save Profile</Text>
+            <Text style={styles.buttonText}>Save Profile</Text>
           )}
         </TouchableOpacity>
 
         {user && (
           <TouchableOpacity
-            style={{...styles.button, backgroundColor: loadingAuthAction ? theme.colors.border : theme.colors.error, marginTop: theme.spacing.lg}}
+            style={[styles.button, { backgroundColor: loadingAuthAction ? theme.colors.border : theme.colors.error, marginTop: theme.spacing.lg }]}
             onPress={handleSignOut}
             disabled={loadingAuthAction}
           >
             {loadingAuthAction && !isSaving ? (
               <ActivityIndicator size="small" color={theme.colors.card} />
             ) : (
-              <Text style={{...styles.buttonText, fontFamily: theme.fonts.body}}>Sign Out</Text>
+              <Text style={styles.buttonText}>Sign Out</Text>
             )}
           </TouchableOpacity>
         )}
@@ -470,22 +481,31 @@ const ProfileScreen = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   container: {
-    flexGrow: 1,
-    justifyContent: "center",
-    padding: theme.spacing.lg,
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
+  scrollContent: {
+    padding: theme.spacing.md,
   },
   title: {
-    fontSize: theme.fontSizes.title,
+    fontSize: theme.fontSizes.xxl,
+    color: theme.colors.textPrimary,
+    fontFamily: theme.fonts.title,
+    fontWeight: 'bold',
     marginBottom: theme.spacing.sm,
     textAlign: "center",
   },
   subtitle: {
     fontSize: theme.fontSizes.md,
+    color: theme.colors.textSecondary,
+    fontFamily: theme.fonts.body,
     textAlign: "center",
     marginBottom: theme.spacing.md,
   },
   emailText: {
     fontSize: theme.fontSizes.sm,
+    color: theme.colors.textSecondary,
+    fontFamily: theme.fonts.body,
     textAlign: "center",
     marginBottom: theme.spacing.xl,
     fontStyle: "italic",
@@ -495,54 +515,66 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: theme.fontSizes.sm,
+    color: theme.colors.textPrimary,
+    fontFamily: theme.fonts.body,
     marginBottom: theme.spacing.xs,
     fontWeight: "bold",
   },
   input: {
-    backgroundColor: theme.colors.card,
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: theme.colors.accentGlow,
     borderRadius: theme.borderRadius.md,
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm + 2,
     fontSize: theme.fontSizes.md,
+    color: theme.colors.textPrimary,
+    fontFamily: theme.fonts.body,
+    ...theme.shadows.soft,
   },
   textArea: {
     height: 80,
     textAlignVertical: "top",
   },
   button: {
+    backgroundColor: theme.colors.primary,
     paddingVertical: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
+    borderRadius: theme.borderRadius.lg,
     alignItems: "center",
     marginTop: theme.spacing.sm,
     minHeight: 50,
     justifyContent: "center",
+    ...theme.shadows.medium,
+    borderWidth: 1,
+    borderColor: theme.colors.accentGlow,
   },
   buttonText: {
-    color: theme.colors.card,
+    color: theme.colors.textPrimary,
     fontSize: theme.fontSizes.md,
     fontWeight: "bold",
+    fontFamily: theme.fonts.body,
   },
   sectionTitleContainer: {
     marginTop: theme.spacing.lg,
     marginBottom: theme.spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: theme.colors.accentGlow,
     paddingBottom: theme.spacing.sm,
   },
   sectionTitle: {
     fontSize: theme.fontSizes.lg,
+    color: theme.colors.textPrimary,
+    fontFamily: theme.fonts.title,
     fontWeight: "bold",
   },
   imageUploadGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-around', // Distribute items
+    justifyContent: 'space-around',
     marginBottom: theme.spacing.lg,
   },
   imageUploadContainer: {
-    width: '45%', // Two items per row with some spacing
+    width: '45%',
     alignItems: 'center',
     marginBottom: theme.spacing.md,
   },
@@ -550,11 +582,12 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: theme.borderRadius.md,
-    backgroundColor: theme.colors.borderMuted,
+    backgroundColor: theme.colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderWidth: 2,
+    borderColor: theme.colors.primary,
+    ...theme.shadows.medium,
   },
   imagePickerButtonText: {
     color: theme.colors.textSecondary,
@@ -565,7 +598,17 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: theme.borderRadius.md,
     resizeMode: 'cover',
-  }
+  },
+  logoContainer: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+  },
+  splashImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
 });
 
 export default ProfileScreen;

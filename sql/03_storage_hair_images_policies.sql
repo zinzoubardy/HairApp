@@ -27,7 +27,7 @@ CREATE POLICY "Allow authenticated user to select own files from user.hair.image
     TO authenticated
     USING (
         bucket_id = 'user.hair.images' AND
-        auth.uid() = owner  -- Check if the authenticated user is the owner of the file
+        auth.uid()::text = owner::text  -- Check if the authenticated user is the owner of the file
     );
 
 -- Policy: Allow authenticated users to upload files into their own folder.
@@ -53,11 +53,11 @@ CREATE POLICY "Allow authenticated user to update own files in user.hair.images"
     TO authenticated
     USING (
         bucket_id = 'user.hair.images' AND
-        auth.uid() = owner -- User can update an object if they are the owner
+        auth.uid()::text = owner::text -- User can update an object if they are the owner
     )
     WITH CHECK (
         bucket_id = 'user.hair.images' AND
-        auth.uid() = owner
+        auth.uid()::text = owner::text
         -- If you also want to enforce that they can only update within their folder path, add:
         -- AND auth.uid()::text = (storage.foldername(name))[1]
         -- However, owner check is usually sufficient for UPDATE.
@@ -71,7 +71,7 @@ CREATE POLICY "Allow authenticated user to delete own files from user.hair.image
     TO authenticated
     USING (
         bucket_id = 'user.hair.images' AND
-        auth.uid() = owner -- User can delete an object if they are the owner
+        auth.uid()::text = owner::text -- User can delete an object if they are the owner
     );
 
 COMMENT ON POLICY "Allow authenticated user to list own folder in user.hair.images" ON storage.objects IS

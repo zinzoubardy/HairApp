@@ -1,188 +1,265 @@
-import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Alert } from "react-native";
-import theme from "../styles/theme";
-import { getProfile, saveHairAnalysisResult } from "../services/SupabaseService"; // Added saveHairAnalysisResult
-import { getHairAnalysis } from "../services/AIService";
-import { useAuth } from "../contexts/AuthContext"; // To ensure user is available
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import theme from '../styles/theme';
+import { useNavigation, useRoute } from '@react-navigation/native';
 
-const AnalysisResultScreen = ({ navigation }) => { // navigation might be needed for retries or going back
-  const { user } = useAuth();
-  const [isLoading, setIsLoading] = useState(true);
-  const [analysisResult, setAnalysisResult] = useState(null);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    const fetchProfileAndAnalyze = async () => {
-      if (!user) {
-        setError("User not authenticated. Please login.");
-        setIsLoading(false);
-        return;
-      }
-
-      setIsLoading(true);
-      setError(null);
-      setAnalysisResult(null);
-
-      try {
-        // 1. Fetch user profile
-        const { data: profileData, error: profileError } = await getProfile();
-
-        if (profileError) {
-          console.error("Failed to load profile for analysis:", profileError.message);
-          setError(`Failed to load your profile: ${profileError.message}. Please try again.`);
-          setIsLoading(false);
-          return;
-        }
-
-        if (!profileData) {
-          setError("No profile data found. Please complete your profile first.");
-          setIsLoading(false);
-          // Optionally navigate to ProfileScreen: navigation.navigate("Profile");
-          return;
-        }
-
-        // Prepare imageReferences (even if some are empty)
-        const imageReferences = {
-          up: profileData.profile_pic_up_url,
-          right: profileData.profile_pic_right_url,
-          left: profileData.profile_pic_left_url,
-          back: profileData.profile_pic_back_url,
-        };
-
-        // 2. Get AI Hair Analysis
-        const { success, data: aiData, error: aiError } = await getHairAnalysis(profileData, imageReferences);
-
-        if (success) {
-          setAnalysisResult(aiData);
-          // 3. Save the analysis result (fire and forget for now, or handle errors more gracefully)
-          const { error: saveError } = await saveHairAnalysisResult(user.id, aiData, imageReferences);
-          if (saveError) {
-            console.warn("Failed to save hair analysis result to database:", saveError.message);
-            // Optionally, inform the user with a non-blocking alert or toast
-            // Alert.alert("Save Warning", "Could not save this analysis to your history. The result is still displayed.");
-          } else {
-            console.log("Hair analysis result saved successfully.");
-          }
-        } else {
-          console.error("AI Analysis Error:", aiError);
-          setError(`AI Analysis Failed: ${aiError || "An unknown error occurred."}`);
-        }
-      } catch (e) {
-        console.error("Exception during analysis process:", e);
-        setError(`An unexpected error occurred: ${e.message}`);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchProfileAndAnalyze();
-  }, [user]); // Re-run if user changes (e.g., logs out and in)
-
-  const renderContent = () => {
-    if (isLoading) {
-      return (
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
-          <Text style={{...styles.infoText, marginTop: theme.spacing.md, color: theme.colors.textSecondary}}>
-            Generating your hair analysis...
-          </Text>
-        </View>
-      );
-    }
-
-    if (error) {
-      return (
-        <View style={styles.centered}>
-          <Text style={{...styles.errorText, fontFamily: theme.fonts.body}}>
-            Error: {error}
-          </Text>
-          {/* TODO: Add a retry button? */}
-        </View>
-      );
-    }
-
-    if (analysisResult) {
-      // Basic formatting: split by common markdown-like list/section headers
-      // More sophisticated rendering (e.g., markdown component) could be used here
-      const sections = analysisResult.split(/\n\s*(?=\d\.\s*\*)/); // Split by "1. **..." pattern
-      return (
-        <View style={styles.contentContainer}>
-          {sections.map((section, index) => (
-            <View key={index} style={styles.section}>
-              <Text style={{...styles.analysisText, fontFamily: theme.fonts.body, color: theme.colors.textPrimary}}>
-                {section.trim()}
-              </Text>
-            </View>
-          ))}
-        </View>
-      );
-    }
-
-    return (
-      <View style={styles.centered}>
-        <Text style={{...styles.infoText, color: theme.colors.textSecondary}}>
-          No analysis data available.
-        </Text>
-      </View>
-    );
-  };
+const AnalysisResultScreen = () => {
+  const navigation = useNavigation();
+  const route = useRoute();
+  const { type, question, answer, imageUrl } = route.params || {};
 
   return (
-    <ScrollView
-        style={{backgroundColor: theme.colors.background}}
-        contentContainerStyle={styles.scrollContainer}
-        keyboardShouldPersistTaps="handled"
-    >
-      <Text style={{ ...styles.title, color: theme.colors.textPrimary, fontFamily: theme.fonts.title }}>
-        Your AI Hair Analysis
-      </Text>
-      {renderContent()}
-    </ScrollView>
+    <LinearGradient colors={[theme.colors.primary, theme.colors.accent, theme.colors.background]} style={styles.container}>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color={theme.colors.primary} />
+          </TouchableOpacity>
+          <Text style={styles.title}>Analysis Result</Text>
+        </View>
+
+        {/* Result Card */}
+        <LinearGradient colors={[theme.colors.card, theme.colors.background]} style={styles.resultCard}>
+          {/* Image */}
+          {imageUrl && (
+            <View style={styles.imageContainer}>
+              <Image source={{ uri: imageUrl }} style={styles.resultImage} />
+            </View>
+          )}
+
+          {/* Question */}
+          <View style={styles.questionSection}>
+            <View style={styles.questionHeader}>
+              <Ionicons name="help-circle" size={24} color={theme.colors.primary} />
+              <Text style={styles.questionLabel}>Your Question</Text>
+            </View>
+            <Text style={styles.questionText}>{question}</Text>
+          </View>
+
+          {/* Answer */}
+          <View style={styles.answerSection}>
+            <View style={styles.answerHeader}>
+              <Ionicons name="bulb" size={24} color={theme.colors.accent} />
+              <Text style={styles.answerLabel}>AI Hair Advisor Response</Text>
+            </View>
+            <Text style={styles.answerText}>{answer}</Text>
+          </View>
+
+          {/* Action Buttons */}
+          <View style={styles.actionButtons}>
+            <TouchableOpacity 
+              style={styles.actionButton}
+              onPress={() => navigation.navigate('Analyse')}
+            >
+              <Ionicons name="refresh" size={20} color={theme.colors.card} />
+              <Text style={styles.actionButtonText}>New Analysis</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.actionButton, styles.secondaryButton]}
+              onPress={() => navigation.navigate('Dashboard')}
+            >
+              <Ionicons name="home" size={20} color={theme.colors.primary} />
+              <Text style={[styles.actionButtonText, styles.secondaryButtonText]}>Go to Dashboard</Text>
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
+      </ScrollView>
+    </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
-  scrollContainer: {
-    flexGrow: 1,
-    padding: theme.spacing.md,
-  },
-  centered: { // Used for loading and error states
+  container: {
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: theme.spacing.lg,
+    backgroundColor: theme.colors.background,
+  },
+  header: {
+    backgroundColor: theme.colors.surface,
+    paddingTop: 60,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    ...theme.shadows.medium,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.accentGlow,
+  },
+  headerTitle: {
+    fontSize: theme.fontSizes.xl,
+    color: theme.colors.textPrimary,
+    fontFamily: theme.fonts.title,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  headerSubtitle: {
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.textSecondary,
+    fontFamily: theme.fonts.body,
+    textAlign: 'center',
+  },
+  scrollContent: {
+    padding: 20,
+  },
+  imageContainer: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  analysisImage: {
+    width: 200,
+    height: 200,
+    borderRadius: theme.borderRadius.lg,
+    marginBottom: 16,
+    ...theme.shadows.medium,
+    borderWidth: 2,
+    borderColor: theme.colors.accentGlow,
+  },
+  questionCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.lg,
+    padding: 20,
+    marginBottom: 24,
+    ...theme.shadows.medium,
+    borderWidth: 1,
+    borderColor: theme.colors.accentGlow,
+  },
+  questionTitle: {
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.accent,
+    fontFamily: theme.fonts.title,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  questionText: {
+    fontSize: theme.fontSizes.body,
+    color: theme.colors.textPrimary,
+    fontFamily: theme.fonts.body,
+    lineHeight: 22,
+  },
+  resultCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.lg,
+    padding: 20,
+    marginBottom: 24,
+    ...theme.shadows.medium,
+    borderWidth: 1,
+    borderColor: theme.colors.accentGlow,
+  },
+  resultTitle: {
+    fontSize: theme.fontSizes.lg,
+    color: theme.colors.textPrimary,
+    fontFamily: theme.fonts.title,
+    fontWeight: 'bold',
+    marginBottom: 16,
+  },
+  resultText: {
+    fontSize: theme.fontSizes.body,
+    color: theme.colors.textPrimary,
+    fontFamily: theme.fonts.body,
+    lineHeight: 24,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 20,
+  },
+  actionButton: {
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.borderRadius.lg,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    flex: 1,
+    marginHorizontal: 8,
+    alignItems: 'center',
+    ...theme.shadows.medium,
+    borderWidth: 1,
+    borderColor: theme.colors.accentGlow,
+  },
+  actionButtonText: {
+    color: theme.colors.textPrimary,
+    fontSize: theme.fontSizes.md,
+    fontWeight: 'bold',
+    fontFamily: theme.fonts.body,
+  },
+  backButton: {
+    position: 'absolute',
+    top: 60,
+    left: 20,
+    zIndex: 10,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 24,
+    padding: 8,
+    ...theme.shadows.soft,
+    borderWidth: 1,
+    borderColor: theme.colors.accentGlow,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: theme.colors.textPrimary,
+    fontSize: theme.fontSizes.md,
+    fontFamily: theme.fonts.body,
+    marginTop: 16,
+  },
+  resultImage: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+  },
+  questionSection: {
+    marginBottom: 24,
+  },
+  questionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  questionLabel: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: theme.colors.primary,
+    marginLeft: 8,
+  },
+  answerSection: {
+    marginBottom: 32,
+  },
+  answerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  answerLabel: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: theme.colors.accent,
+    marginLeft: 8,
+  },
+  answerText: {
+    fontSize: 16,
+    color: theme.colors.textPrimary,
+    lineHeight: 24,
+    backgroundColor: theme.colors.background,
+    padding: 16,
+    borderRadius: 12,
+  },
+  secondaryButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderColor: theme.colors.primary,
+  },
+  secondaryButtonText: {
+    color: theme.colors.primary,
   },
   title: {
-    fontSize: theme.fontSizes.title,
-    marginBottom: theme.spacing.lg,
-    textAlign: "center",
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: theme.colors.primary,
   },
-  contentContainer: {
-    width: "100%",
-  },
-  section: {
-    marginBottom: theme.spacing.md,
-    padding: theme.spacing.md,
-    backgroundColor: theme.colors.card,
-    borderRadius: theme.borderRadius.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  infoText: {
-    fontSize: theme.fontSizes.md,
-    textAlign: "center",
-    marginBottom: theme.spacing.md,
-  },
-  errorText: {
-    fontSize: theme.fontSizes.md,
-    textAlign: "center",
-    marginBottom: theme.spacing.md,
-    color: theme.colors.error,
-  },
-  analysisText: {
-    fontSize: theme.fontSizes.body,
-    lineHeight: theme.fontSizes.body * 1.5,
-  }
 });
 
 export default AnalysisResultScreen;

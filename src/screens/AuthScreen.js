@@ -8,41 +8,65 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-  Alert
+  Alert,
+  Image
 } from "react-native";
 import theme from "../styles/theme";
-import { useAuth } from "../contexts/AuthContext"; // Import useAuth
+import { useAuth } from "../contexts/AuthContext";
+import { useNavigation } from '@react-navigation/native';
 
 const AuthScreen = () => {
-  const { signUp, signInWithPassword, loadingAuthAction } = useAuth(); // Use the context
+  const { signUp, signIn, loadingAuthAction } = useAuth(); // Use the context
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSignUpMode, setIsSignUpMode] = useState(false);
+  const navigation = useNavigation();
+
+  console.log('DEBUG: signIn from useAuth:', signIn, typeof signIn);
 
   const handleAuthAction = async () => {
-    if (!email || !password) {
-      Alert.alert("Input Required", "Please enter both email and password.");
+    console.log("handleAuthAction called");
+    console.log("Email:", email);
+    console.log("Password length:", password.length);
+    console.log("isSignUpMode:", isSignUpMode);
+    console.log("signIn function:", signIn);
+    console.log("signIn.toString():", signIn.toString());
+    
+    if (!email.trim() || !password.trim()) {
+      Alert.alert("Error", "Please fill in all fields");
       return;
     }
 
-    if (isSignUpMode) {
-      const { data, error } = await signUp(email, password);
-      if (error) {
-        Alert.alert("Sign Up Error", error.message);
-      } else if (data && data.user && data.session) {
-        // This case means user is signed up and logged in (e.g. autoVerify is true)
-        Alert.alert("Sign Up Successful", "You have successfully signed up and are logged in.");
-      } else if (data && data.user && !data.session) {
-        // This case means user is signed up but needs to confirm email (e.g. autoVerify is false)
-         Alert.alert("Sign Up Successful", "Please check your email to confirm your registration.");
+    if (typeof signIn !== 'function') {
+      Alert.alert('Critical Error', 'signIn is not a function. Please check AuthContext usage.');
+      return;
+    }
+
+    console.log("Starting auth action...");
+    try {
+      if (isSignUpMode) {
+        console.log("Attempting sign up...");
+        await signUp(email, password);
+        Alert.alert("Success", "Account created! Please check your email to verify your account.");
+      } else {
+        console.log("Attempting sign in...");
+        console.log("About to call signIn with:", email, password);
+        try {
+          const result = await signIn(email, password);
+          console.log("Sign in result:", result);
+          console.log("Sign in successful, navigating to MainTabs");
+          // Navigate to main app after successful login
+          navigation.navigate('MainTabs');
+        } catch (signInError) {
+          console.error("Error in signIn call:", signInError);
+          throw signInError;
+        }
       }
-    } else {
-      const { error } = await signInWithPassword(email, password);
-      if (error) {
-        Alert.alert("Sign In Error", error.message);
-      }
-      // On successful sign-in, the onAuthStateChange listener in AuthContext
-      // will update the session and user state, triggering navigation if App.tsx is set up for it.
+    } catch (error) {
+      console.error("Auth error:", error);
+      Alert.alert("Error", error.message);
+    } finally {
+      console.log("Auth action completed");
     }
   };
 
@@ -52,59 +76,93 @@ const AuthScreen = () => {
       style={styles.outerContainer}
     >
       <View style={styles.container}>
-        <Text style={{ ...styles.title, color: theme.colors.textPrimary, fontFamily: theme.fonts.title }}>
+        <View style={styles.logoContainer}>
+          <Image 
+            source={require('../../assets/splash.png')} 
+            style={styles.logo}
+            resizeMode="contain"
+          />
+        </View>
+        <Text style={styles.title}>
           {isSignUpMode ? "Create Account" : "Welcome Back"}
         </Text>
-        <Text style={{ ...styles.subtitle, color: theme.colors.textSecondary, fontFamily: theme.fonts.body }}>
+        <Text style={styles.subtitle}>
           {isSignUpMode ? "Join HairNature AI today!" : "Sign in to continue."}
         </Text>
 
-        <TextInput
-          style={{...styles.input, fontFamily: theme.fonts.body, color: theme.colors.textPrimary}}
-          placeholder="Email"
-          placeholderTextColor={theme.colors.textSecondary}
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          returnKeyType="next"
-          editable={!loadingAuthAction}
-        />
-        <TextInput
-          style={{...styles.input, fontFamily: theme.fonts.body, color: theme.colors.textPrimary}}
-          placeholder="Password"
-          placeholderTextColor={theme.colors.textSecondary}
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          returnKeyType="done"
-          editable={!loadingAuthAction}
-          onSubmitEditing={handleAuthAction}
-        />
+        <View style={styles.formContainer}>
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.input}
+              placeholder="Email"
+              placeholderTextColor={theme.colors.textSecondary}
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              returnKeyType="next"
+              editable={!loadingAuthAction}
+            />
+          </View>
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.input}
+              placeholder="Password"
+              placeholderTextColor={theme.colors.textSecondary}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              returnKeyType="done"
+              editable={!loadingAuthAction}
+              onSubmitEditing={handleAuthAction}
+            />
+          </View>
 
-        <TouchableOpacity
-          style={{ ...styles.button, backgroundColor: loadingAuthAction ? theme.colors.border : theme.colors.primary }}
-          onPress={handleAuthAction}
-          disabled={loadingAuthAction}
-        >
-          {loadingAuthAction ? (
-            <ActivityIndicator size="small" color={theme.colors.card} />
-          ) : (
-            <Text style={{...styles.buttonText, fontFamily: theme.fonts.body}}>
-              {isSignUpMode ? "Sign Up" : "Sign In"}
+          <TouchableOpacity
+            style={styles.primaryButton}
+            onPress={() => {
+              console.log("Button pressed!");
+              handleAuthAction();
+            }}
+            disabled={loadingAuthAction}
+          >
+            {loadingAuthAction ? (
+              <ActivityIndicator size="small" color={theme.colors.textPrimary} />
+            ) : (
+              <Text style={styles.primaryButtonText}>
+                {isSignUpMode ? "Sign Up" : "Sign In"}
+              </Text>
+            )}
+          </TouchableOpacity>
+
+          <View style={styles.dividerContainer}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>OR</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          <TouchableOpacity
+            style={styles.socialButton}
+            onPress={() => {}}
+          >
+            <Text style={styles.socialButtonText}>Sign In with Google</Text>
+          </TouchableOpacity>
+
+          <View style={styles.toggleContainer}>
+            <Text style={styles.toggleText}>
+              {isSignUpMode ? "Already have an account? Sign In" : "Don't have an account? Sign Up"}
             </Text>
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.toggleButton}
-          onPress={() => setIsSignUpMode(!isSignUpMode)}
-          disabled={loadingAuthAction}
-        >
-          <Text style={{...styles.toggleButtonText, color: theme.colors.primary, fontFamily: theme.fonts.body}}>
-            {isSignUpMode ? "Already have an account? Sign In" : "Don't have an account? Sign Up"}
-          </Text>
-        </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.toggleButton}
+              onPress={() => setIsSignUpMode(!isSignUpMode)}
+              disabled={loadingAuthAction}
+            >
+              <Text style={styles.toggleButtonText}>
+                {isSignUpMode ? "Sign In" : "Sign Up"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </View>
     </KeyboardAvoidingView>
   );
@@ -117,51 +175,175 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: theme.spacing.lg,
+    backgroundColor: theme.colors.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+  },
+  logoContainer: {
+    alignItems: 'center',
+    marginBottom: 60,
+  },
+  logo: {
+    width: 120,
+    height: 120,
+    marginBottom: 20,
+    borderRadius: theme.borderRadius.lg,
+    ...theme.shadows.glow,
   },
   title: {
-    fontSize: theme.fontSizes.title,
-    marginBottom: theme.spacing.sm,
-    textAlign: "center",
+    fontSize: theme.fontSizes.xxl,
+    color: theme.colors.textPrimary,
+    fontFamily: theme.fonts.title,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    textAlign: 'center',
   },
   subtitle: {
     fontSize: theme.fontSizes.md,
-    textAlign: "center",
-    marginBottom: theme.spacing.xl,
+    color: theme.colors.textSecondary,
+    fontFamily: theme.fonts.body,
+    textAlign: 'center',
+    marginBottom: 40,
+  },
+  formContainer: {
+    width: '100%',
+    maxWidth: 320,
+  },
+  inputContainer: {
+    marginBottom: 20,
   },
   input: {
-    width: "100%",
-    backgroundColor: theme.colors.card,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.md,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.textPrimary,
+    fontFamily: theme.fonts.body,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.borderRadius.md,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.md - 2,
-    fontSize: theme.fontSizes.md,
-    marginBottom: theme.spacing.md,
+    borderColor: theme.colors.accentGlow,
+    ...theme.shadows.soft,
   },
-  button: {
-    width: "100%",
-    paddingVertical: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 50,
-    marginTop: theme.spacing.sm,
+  inputFocused: {
+    borderColor: theme.colors.accent,
+    ...theme.shadows.medium,
   },
-  buttonText: {
-    color: theme.colors.card,
+  inputError: {
+    borderColor: theme.colors.error,
+  },
+  errorText: {
+    color: theme.colors.error,
+    fontSize: theme.fontSizes.sm,
+    fontFamily: theme.fonts.body,
+    marginTop: 4,
+    marginLeft: 4,
+  },
+  primaryButton: {
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.borderRadius.lg,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    marginBottom: 16,
+    ...theme.shadows.medium,
+    borderWidth: 1,
+    borderColor: theme.colors.accentGlow,
+  },
+  primaryButtonText: {
+    color: theme.colors.textPrimary,
     fontSize: theme.fontSizes.md,
-    fontWeight: "bold",
+    fontWeight: 'bold',
+    fontFamily: theme.fonts.body,
+  },
+  secondaryButton: {
+    backgroundColor: 'transparent',
+    borderRadius: theme.borderRadius.lg,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    marginBottom: 16,
+    borderWidth: 2,
+    borderColor: theme.colors.accent,
+    ...theme.shadows.soft,
+  },
+  secondaryButtonText: {
+    color: theme.colors.accent,
+    fontSize: theme.fontSizes.md,
+    fontWeight: 'bold',
+    fontFamily: theme.fonts.body,
+  },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 24,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: theme.colors.border,
+  },
+  dividerText: {
+    color: theme.colors.textSecondary,
+    fontSize: theme.fontSizes.sm,
+    fontFamily: theme.fonts.body,
+    marginHorizontal: 16,
+  },
+  socialButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.lg,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.accentGlow,
+    ...theme.shadows.soft,
+  },
+  socialButtonText: {
+    color: theme.colors.textPrimary,
+    fontSize: theme.fontSizes.md,
+    fontWeight: '600',
+    fontFamily: theme.fonts.body,
+    marginLeft: 12,
+  },
+  toggleContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 24,
+  },
+  toggleText: {
+    color: theme.colors.textSecondary,
+    fontSize: theme.fontSizes.md,
+    fontFamily: theme.fonts.body,
   },
   toggleButton: {
-    marginTop: theme.spacing.lg,
+    marginLeft: 8,
   },
   toggleButtonText: {
-    fontSize: theme.fontSizes.sm,
-    fontWeight: "600",
+    color: theme.colors.accent,
+    fontSize: theme.fontSizes.md,
+    fontWeight: 'bold',
+    fontFamily: theme.fonts.body,
+  },
+  loadingContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(26, 28, 29, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  loadingText: {
+    color: theme.colors.textPrimary,
+    fontSize: theme.fontSizes.md,
+    fontFamily: theme.fonts.body,
+    marginTop: 16,
   },
 });
 

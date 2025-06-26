@@ -15,10 +15,13 @@ if (!SUPABASE_ANON_KEY) {
   console.error("Supabase Anon Key is not provided! Please check your configuration.");
 }
 
+console.log('DEBUG: SUPABASE_URL:', SUPABASE_URL);
+console.log('DEBUG: SUPABASE_ANON_KEY:', SUPABASE_ANON_KEY ? SUPABASE_ANON_KEY.slice(0, 8) + '...' : undefined);
+
 // Initialize the Supabase client
 // Note: Supabase JS V2 automatically uses AsyncStorage in React Native environments.
 // Explicitly passing AsyncStorage is generally not needed unless you have specific advanced requirements.
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     // storage: AsyncStorage, // Not typically needed for React Native with Supabase V2+
     autoRefreshToken: true,
@@ -50,7 +53,7 @@ export const getProfile = async () => {
 
   try {
     const selectFields = `
-      username, full_name, avatar_url, hair_goal, allergies,
+      id, username, full_name, avatar_url, hair_goal, allergies,
       hair_color, hair_condition, hair_concerns_preferences,
       profile_pic_up_url, profile_pic_right_url, profile_pic_left_url, profile_pic_back_url
     `;
@@ -105,14 +108,52 @@ export const uploadProfileImage = async (userId, fileUri, angle) => {
   }
 
   try {
+    console.log('=== UPLOAD DEBUG START ===');
+    console.log('userId:', userId);
+    console.log('fileUri:', fileUri);
+    console.log('angle:', angle);
+    
     const fileExtension = fileUri.split('.').pop()?.toLowerCase() || 'jpg';
     const fileName = `${angle}.${fileExtension}`;
     const filePath = `${userId}/${fileName}`; // Store in folder named after userId
+    
+    console.log('fileExtension:', fileExtension);
+    console.log('fileName:', fileName);
+    console.log('filePath:', filePath);
 
-    // Supabase storage needs a File object or a Blob.
-    // For React Native, we need to fetch the image URI and convert it to a Blob.
+    // Use base64 approach for better React Native compatibility
+    console.log('Converting file to base64...');
     const response = await fetch(fileUri);
+    console.log('Fetch response status:', response.status);
+    console.log('Fetch response ok:', response.ok);
+    
+    if (!response.ok) {
+      console.error('Fetch failed:', response.status, response.statusText);
+      return { data: null, error: { message: `Failed to fetch file: ${response.status} ${response.statusText}` } };
+    }
+    
+    // Convert to base64
     const blob = await response.blob();
+    const reader = new FileReader();
+    
+    const base64Promise = new Promise((resolve, reject) => {
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+    });
+    
+    reader.readAsDataURL(blob);
+    const base64Data = await base64Promise;
+    
+    // Extract the base64 part (remove data:image/jpeg;base64, prefix)
+    const base64String = base64Data.split(',')[1];
+    
+    console.log('Base64 conversion successful');
+    console.log('Base64 length:', base64String.length);
+    
+    if (!base64String) {
+      console.error('Base64 conversion failed!');
+      return { data: null, error: { message: 'Failed to convert image to base64' } };
+    }
 
     // Determine content type
     let contentType = 'image/jpeg'; // Default
@@ -121,24 +162,30 @@ export const uploadProfileImage = async (userId, fileUri, angle) => {
     } else if (fileExtension === 'webp') {
       contentType = 'image/webp';
     }
-    // Add more types if needed
+    
+    console.log('Content type:', contentType);
+    console.log('Upload path:', filePath);
+    console.log('Bucket name: user.hair.images');
 
+    // Upload using base64
     const { data, error: uploadError } = await supabase.storage
-      .from('profile-pictures') // Bucket name
-      .upload(filePath, blob, {
-        cacheControl: '3600', // Optional: cache for 1 hour
-        upsert: true, // True to overwrite if file already exists, false to error
+      .from('user.hair.images')
+      .upload(filePath, decode(base64String), {
         contentType: contentType,
+        upsert: true,
       });
+
+    console.log('=== UPLOAD DEBUG END ===');
 
     if (uploadError) {
       console.error(`Error uploading ${angle} image:`, uploadError.message);
+      console.error('Upload error details:', uploadError);
       return { data: null, error: uploadError };
     }
 
     // Get public URL
     const { data: urlData } = supabase.storage
-      .from('profile-pictures')
+      .from('user.hair.images')
       .getPublicUrl(filePath);
 
     if (!urlData || !urlData.publicUrl) {
@@ -150,10 +197,20 @@ export const uploadProfileImage = async (userId, fileUri, angle) => {
 
   } catch (e) {
     console.error(`Exception during ${angle} image upload:`, e);
+    console.error('Exception details:', e);
     return { data: null, error: { message: e.message || `An unexpected error occurred during ${angle} image upload.` } };
   }
 };
 
+// Helper function to decode base64 to Uint8Array
+function decode(base64) {
+  const binaryString = atob(base64);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes;
+}
 
 // --- Hair Analysis Results Helper Functions ---
 
@@ -202,6 +259,39 @@ export const saveHairAnalysisResult = async (userId, analysisResponse, imageRefe
   }
 };
 
+// Get the latest hair analysis result for a user
+export const getHairAnalysisResult = async (userId) => {
+  if (!userId) {
+    console.error("User ID is required to fetch hair analysis result.");
+    return { data: null, error: { message: "User ID is required." } };
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("hair_analysis_results")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false }) // Get the most recent analysis
+      .limit(1)
+      .single();
+
+    if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
+      console.error("Error fetching hair analysis result:", error.message);
+      return { data: null, error };
+    }
+
+    // If no analysis found, return null data but no error
+    if (error && error.code === 'PGRST116') {
+      return { data: null, error: null };
+    }
+
+    return { data, error: null };
+  } catch (e) {
+    console.error("Exception fetching hair analysis result:", e);
+    return { data: null, error: { message: e.message || "An unexpected error occurred while fetching analysis." } };
+  }
+};
+
 // Update (or insert if not exists) the profile for the authenticated user
 export const updateProfile = async (profileData) => { // profileData should contain username, full_name, avatar_url, hair_goal, allergies
   const { data: { user } } = await supabase.auth.getUser();
@@ -222,7 +312,7 @@ export const updateProfile = async (profileData) => { // profileData should cont
     // The `handle_new_user` trigger should have created a row, so this will usually be an update.
     // However, upsert is safer.
     const selectFields = `
-      username, full_name, avatar_url, hair_goal, allergies,
+      id, username, full_name, avatar_url, hair_goal, allergies,
       hair_color, hair_condition, hair_concerns_preferences,
       profile_pic_up_url, profile_pic_right_url, profile_pic_left_url, profile_pic_back_url
     `;

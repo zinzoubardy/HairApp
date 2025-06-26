@@ -1,108 +1,10 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
-import styled, { ThemeProvider } from 'styled-components/native';
+import React, { useState, useCallback, useEffect } from 'react';
+import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, Alert, StyleSheet, ScrollView, Image } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { getRoutines, deleteRoutine } from '../services/SupabaseService';
 import theme from '../styles/theme';
-
-// Styled Components
-const Container = styled.View`
-  flex: 1;
-  background-color: ${props => props.theme.colors.background};
-  padding: ${props => props.theme.spacing.md}px;
-`;
-
-const HeaderText = styled.Text`
-  font-size: ${props => props.theme.typography.h1.fontSize}px;
-  font-weight: ${props => props.theme.typography.h1.fontWeight};
-  color: ${props => props.theme.colors.textPrimary};
-  margin-bottom: ${props => props.theme.spacing.lg}px;
-  text-align: center;
-`;
-
-const RoutineItemContainer = styled.View`
-  background-color: ${props => props.theme.colors.surface};
-  padding: ${props => props.theme.spacing.md}px;
-  border-radius: ${props => props.theme.borderRadius.md}px;
-  margin-bottom: ${props => props.theme.spacing.md}px;
-  border-width: 1px;
-  border-color: ${props => props.theme.colors.border};
-`;
-
-const RoutineTitle = styled.Text`
-  font-size: ${props => props.theme.typography.h2.fontSize}px;
-  font-weight: ${props => props.theme.typography.h2.fontWeight};
-  color: ${props => props.theme.colors.primary};
-  margin-bottom: ${props => props.theme.spacing.sm}px;
-`;
-
-const RoutineDescription = styled.Text`
-  font-size: ${props => props.theme.typography.body.fontSize}px;
-  color: ${props => props.theme.colors.textPrimary};
-  margin-bottom: ${props => props.theme.spacing.sm}px;
-`;
-
-const RoutineType = styled.Text`
-  font-size: ${props => props.theme.typography.caption.fontSize}px;
-  color: ${props => props.theme.colors.textSecondary};
-  margin-bottom: ${props => props.theme.spacing.md}px;
-  font-style: italic;
-`;
-
-const ButtonGroup = styled.View`
-  flex-direction: row;
-  justify-content: flex-end;
-  margin-top: ${props => props.theme.spacing.sm}px;
-`;
-
-const ActionButton = styled.TouchableOpacity`
-  background-color: ${props => props.theme.colors.primary};
-  padding: ${props => props.theme.spacing.sm}px ${props => props.theme.spacing.md}px;
-  border-radius: ${props => props.theme.borderRadius.sm}px;
-  margin-left: ${props => props.theme.spacing.sm}px;
-`;
-
-const DeleteButtonStyled = styled(ActionButton)`
-  background-color: ${props => props.theme.colors.error};
-`;
-
-const ActionButtonText = styled.Text`
-  color: #ffffff;
-  font-size: ${props => props.theme.typography.button.fontSize}px;
-  font-weight: ${props => props.theme.typography.button.fontWeight};
-`;
-
-const CreateButtonContainer = styled.View`
-  margin-top: ${props => props.theme.spacing.md}px;
-  margin-bottom: ${props => props.theme.spacing.md}px;
-`;
-
-const CreateButton = styled.TouchableOpacity`
-  background-color: ${props => props.theme.colors.accent};
-  padding: ${props => props.theme.spacing.lg}px;
-  border-radius: ${props => props.theme.borderRadius.md}px;
-  align-items: center;
-`;
-
-const CreateButtonText = styled.Text`
-  color: #ffffff;
-  font-size: ${props => props.theme.typography.h2.fontSize}px;
-  font-weight: ${props => props.theme.typography.h2.fontWeight};
-`;
-
-const LoadingContainer = styled.View`
-  flex: 1;
-  justify-content: center;
-  align-items: center;
-  background-color: ${props => props.theme.colors.background};
-`;
-
-const EmptyText = styled.Text`
-  color: ${props => props.theme.colors.textSecondary};
-  font-size: ${props => props.theme.typography.body.fontSize}px;
-  text-align: center;
-  margin-top: ${props => props.theme.spacing.xl}px;
-`;
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useAuth } from '../contexts/AuthContext';
 
 const RoutineScreen = () => {
   const navigation = useNavigation();
@@ -154,55 +56,197 @@ const RoutineScreen = () => {
   };
 
   const renderItem = ({ item }) => (
-    <RoutineItemContainer>
-      <RoutineTitle>{item.title}</RoutineTitle>
-      <RoutineDescription>{item.description}</RoutineDescription>
-      <RoutineType>{item.routine_type}</RoutineType>
-      <ButtonGroup>
-        <ActionButton onPress={() => handleEdit(item)}>
-          <ActionButtonText>Edit</ActionButtonText>
-        </ActionButton>
-        <DeleteButtonStyled onPress={() => handleDelete(item.id)}>
-          <ActionButtonText>Delete</ActionButtonText>
-        </DeleteButtonStyled>
-      </ButtonGroup>
-    </RoutineItemContainer>
+    <View style={styles.routineItem}>
+      <Text style={styles.routineTitle}>{item.title}</Text>
+      <Text style={styles.routineDescription}>{item.description}</Text>
+      <Text style={styles.routineType}>{item.routine_type}</Text>
+      <View style={styles.buttonGroup}>
+        <TouchableOpacity style={styles.actionButton} onPress={() => handleEdit(item)}>
+          <Text style={styles.actionButtonText}>Edit</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.deleteButton} onPress={() => handleDelete(item.id)}>
+          <Text style={styles.actionButtonText}>Delete</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
   );
 
   if (loading) {
     return (
-      <ThemeProvider theme={theme}>
-        <LoadingContainer>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
-        </LoadingContainer>
-      </ThemeProvider>
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={theme.colors.accent} />
+      </View>
     );
   }
 
   return (
-    <ThemeProvider theme={theme}>
-      <Container>
-        <HeaderText>My Routines</HeaderText>
-        <CreateButtonContainer>
-          <CreateButton onPress={handleCreate}>
-            <CreateButtonText>+ Create New Routine</CreateButtonText>
-          </CreateButton>
-        </CreateButtonContainer>
-        {routines.length === 0 ? (
-          <EmptyText>No routines found. Create your first routine!</EmptyText>
-        ) : (
-          <FlatList
-            data={routines}
-            keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
-            renderItem={renderItem}
-            refreshing={refreshing}
-            onRefresh={fetchRoutines}
-            contentContainerStyle={{ paddingBottom: 32 }}
-          />
-        )}
-      </Container>
-    </ThemeProvider>
+    <View style={styles.container}>
+      <View style={styles.logoContainer}>
+        <Image source={require('../../assets/splash.png')} style={styles.splashImage} />
+      </View>
+
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>My Routines</Text>
+        </View>
+        <View style={styles.content}>
+          <TouchableOpacity style={styles.createButton} onPress={handleCreate}>
+            <Text style={styles.createButtonText}>+ Create New Routine</Text>
+          </TouchableOpacity>
+          {routines.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyText}>No routines found. Create your first routine!</Text>
+            </View>
+          ) : (
+            <FlatList
+              data={routines}
+              keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
+              renderItem={renderItem}
+              refreshing={refreshing}
+              onRefresh={fetchRoutines}
+              contentContainerStyle={styles.listContainer}
+            />
+          )}
+        </View>
+      </ScrollView>
+    </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
+  header: {
+    backgroundColor: theme.colors.surface,
+    paddingTop: 60,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    ...theme.shadows.medium,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.accentGlow,
+  },
+  headerTitle: {
+    fontSize: theme.fontSizes.xl,
+    color: theme.colors.textPrimary,
+    fontFamily: theme.fonts.title,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  content: {
+    flex: 1,
+    padding: 20,
+  },
+  createButton: {
+    backgroundColor: theme.colors.accent,
+    borderRadius: theme.borderRadius.lg,
+    padding: 16,
+    alignItems: 'center',
+    marginBottom: 20,
+    ...theme.shadows.medium,
+    borderWidth: 1,
+    borderColor: theme.colors.accentGlow,
+  },
+  createButtonText: {
+    color: theme.colors.textPrimary,
+    fontSize: theme.fontSizes.lg,
+    fontWeight: 'bold',
+    fontFamily: theme.fonts.title,
+  },
+  routineItem: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.lg,
+    padding: 20,
+    marginBottom: 16,
+    ...theme.shadows.medium,
+    borderWidth: 1,
+    borderColor: theme.colors.accentGlow,
+  },
+  routineTitle: {
+    fontSize: theme.fontSizes.lg,
+    color: theme.colors.primary,
+    fontFamily: theme.fonts.title,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  routineDescription: {
+    fontSize: theme.fontSizes.body,
+    color: theme.colors.textPrimary,
+    fontFamily: theme.fonts.body,
+    marginBottom: 8,
+    lineHeight: 20,
+  },
+  routineType: {
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.textSecondary,
+    fontFamily: theme.fonts.body,
+    marginBottom: 16,
+    fontStyle: 'italic',
+  },
+  buttonGroup: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
+  actionButton: {
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.borderRadius.md,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    marginLeft: 8,
+    ...theme.shadows.soft,
+    borderWidth: 1,
+    borderColor: theme.colors.accentGlow,
+  },
+  deleteButton: {
+    backgroundColor: theme.colors.error,
+    borderRadius: theme.borderRadius.md,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    marginLeft: 8,
+    ...theme.shadows.soft,
+    borderWidth: 1,
+    borderColor: theme.colors.accentGlow,
+  },
+  actionButtonText: {
+    color: theme.colors.textPrimary,
+    fontSize: theme.fontSizes.sm,
+    fontWeight: 'bold',
+    fontFamily: theme.fonts.body,
+  },
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  emptyText: {
+    color: theme.colors.textSecondary,
+    fontSize: theme.fontSizes.body,
+    fontFamily: theme.fonts.body,
+    textAlign: 'center',
+  },
+  listContainer: {
+    paddingBottom: 32,
+  },
+  logoContainer: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+  },
+  splashImage: {
+    width: 100,
+    height: 100,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+});
 
 export default RoutineScreen;

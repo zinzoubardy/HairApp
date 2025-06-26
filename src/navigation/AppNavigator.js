@@ -3,15 +3,19 @@ import { createStackNavigator } from "@react-navigation/stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { TouchableOpacity, View, StyleSheet, Platform } from "react-native";
+import { useAuth } from "../contexts/AuthContext";
 
 import HomeScreen from "../screens/HomeScreen"; // Will be the new Dashboard
 import UploadScreen from "../screens/UploadScreen";
 import ProfileScreen from "../screens/ProfileScreen";
 import AnalysisResultScreen from "../screens/AnalysisResultScreen";
+import AnalysisOptionsScreen from "../screens/AnalysisOptionsScreen";
 import HairAIScreen from "../screens/HairAIScreen";
 import RoutineScreen from "../screens/RoutineScreen";
 import RoutineForm from "../screens/RoutineForm";
 import MenuScreen from "../screens/MenuScreen"; // New Menu Screen
+import SplashScreen from "../screens/SplashScreen"; // New Splash Screen
+import AuthScreen from "../screens/AuthScreen";
 import theme from "../styles/theme";
 
 const Stack = createStackNavigator();
@@ -20,13 +24,16 @@ const Tab = createBottomTabNavigator();
 // Standard screen options for Stack navigators
 const defaultStackScreenOptions = {
   headerStyle: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: theme.colors.surface,
+    ...theme.shadows.medium,
   },
-  headerTintColor: theme.colors.card,
+  headerTintColor: theme.colors.textPrimary,
   headerTitleStyle: {
     fontFamily: theme.fonts.title,
     fontSize: theme.fontSizes.lg,
+    color: theme.colors.textPrimary,
   },
+  cardStyle: { backgroundColor: theme.colors.background },
 };
 
 // A dummy component that renders nothing, for tabs that are action buttons
@@ -52,19 +59,41 @@ const MainTabNavigator = () => {
           }
           return <Ionicons name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: theme.colors.primary,
+        tabBarActiveTintColor: theme.colors.accent,
         tabBarInactiveTintColor: theme.colors.textSecondary,
         tabBarStyle: {
-            backgroundColor: theme.colors.card,
-            borderTopColor: theme.colors.border,
-            height: Platform.OS === 'ios' ? 90 : 70, // Standard height
+          backgroundColor: theme.colors.surface,
+          borderTopColor: theme.colors.accentGlow,
+          borderTopWidth: 1,
+          height: Platform.OS === 'ios' ? 90 : 70,
+          ...theme.shadows.medium,
+        },
+        tabBarLabelStyle: {
+          fontSize: theme.fontSizes.sm,
+          fontFamily: theme.fonts.body,
+          fontWeight: '600',
         },
         headerShown: false,
+        cardStyle: { backgroundColor: theme.colors.background },
       })}
     >
       <Tab.Screen name="Dashboard" component={HomeScreen} />
       <Tab.Screen name="Routines" component={RoutineScreen} />
-      <Tab.Screen name="Analyse" component={UploadScreen} />
+      <Tab.Screen 
+        name="Analyse" 
+        component={AnalysisOptionsScreen}
+        options={{
+          tabBarButton: (props) => (
+            <TouchableOpacity
+              {...props}
+              onPress={() => {
+                // Always navigate to AnalysisOptionsScreen when tab is pressed
+                props.onPress();
+              }}
+            />
+          ),
+        }}
+      />
       <Tab.Screen name="AI Advisor" component={HairAIScreen} />
       <Tab.Screen name="Menu" component={MenuScreen} />
     </Tab.Navigator>
@@ -76,10 +105,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    // This is to help lift the button if needed, but might need adjustment
-    // depending on how the tab bar handles flex items.
-    // For a true FAB effect, absolute positioning on top of the navigator is better.
-    // This approach integrates it into the tab bar flow.
   },
   actionButton: {
     width: 60,
@@ -88,24 +113,62 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    // Optional: Add shadow for FAB effect
-    shadowColor: theme.colors.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.6,
-    shadowRadius: 5,
-    elevation: 5,
-    // Position it slightly higher if tab bar has padding
-    // For very specific positioning, might need to adjust tabBarStyle height and this button's position.
-    // top: -20, // Example: to lift it up
+    ...theme.shadows.glow,
+    borderWidth: 2,
+    borderColor: theme.colors.accentGlow,
   },
 });
 
+const screenOptions = {
+  headerShown: false,
+  cardStyle: { backgroundColor: theme.colors.background },
+};
+
+const tabScreenOptions = {
+  headerShown: false,
+  tabBarStyle: {
+    backgroundColor: theme.colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.accentGlow,
+    paddingBottom: 8,
+    paddingTop: 8,
+    height: 60,
+    ...theme.shadows.medium,
+  },
+  tabBarActiveTintColor: theme.colors.accent,
+  tabBarInactiveTintColor: theme.colors.textSecondary,
+  tabBarLabelStyle: {
+    fontSize: theme.fontSizes.sm,
+    fontFamily: theme.fonts.body,
+    fontWeight: '600',
+  },
+  cardStyle: { backgroundColor: theme.colors.background },
+};
 
 // The AppNavigator now includes the MainTabNavigator and other screens outside the tabs (like modal forms)
 // The Auth flow (handled in App.tsx) will navigate to "MainApp" stack which contains MainTabNavigator.
 const AppNavigator = () => {
+  const { user, loadingInitial } = useAuth();
+
+  if (loadingInitial) {
+    return null; // This will show the loading screen from App.tsx
+  }
+
   return (
-    <Stack.Navigator screenOptions={defaultStackScreenOptions}>
+    <Stack.Navigator 
+      screenOptions={defaultStackScreenOptions}
+      initialRouteName={user ? "MainTabs" : "Splash"}
+    >
+      <Stack.Screen
+        name="Splash"
+        component={SplashScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="Auth"
+        component={AuthScreen}
+        options={{ headerShown: false }}
+      />
       <Stack.Screen
         name="MainTabs"
         component={MainTabNavigator}
@@ -133,6 +196,11 @@ const AppNavigator = () => {
         name="AnalysisResult" // This screen might be deprecated if Home becomes the dashboard
         component={AnalysisResultScreen}
         options={{ title: "Analysis Result" }}
+      />
+      <Stack.Screen
+        name="AnalysisOptionsScreen"
+        component={AnalysisOptionsScreen}
+        options={{ title: "Hair Analysis Options" }}
       />
       {/* Add other full-screen modals or navigation flows here if needed */}
     </Stack.Navigator>

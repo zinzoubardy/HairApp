@@ -5,13 +5,13 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  ScrollView,
   ActivityIndicator,
   Alert,
   StatusBar,
-  // Platform // Commented out
+  Platform,
+  KeyboardAvoidingView,
+  Image,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { getAIHairstyleAdvice } from '../services/AIService';
 import theme from '../styles/theme';
 
@@ -46,165 +46,179 @@ const HairAIScreen = () => {
   };
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.container}
-      keyboardShouldPersistTaps="handled"
+    <KeyboardAvoidingView 
+      style={styles.container} 
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <StatusBar barStyle="light-content" backgroundColor={theme.colors.background} />
-      <Text style={styles.title}>AI Hair Advisor</Text>
-      <Text style={styles.description}>
-        Ask our AI for hairstyle advice, color suggestions, or product recommendations!
-      </Text>
+      
+      {/* Logo in top right */}
+      <View style={styles.logoContainer}>
+        <Image source={require('../../assets/splash.png')} style={styles.splashImage} />
+      </View>
 
-      <TextInput
-        style={styles.input}
-        placeholder="e.g., What hairstyle suits a round face with curly hair?"
-        placeholderTextColor={theme.colors.textSecondary}
-        value={prompt}
-        onChangeText={setPrompt}
-        multiline
-        editable={!loading}
-      />
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>AI Hair Advisor</Text>
+        <Text style={styles.headerSubtitle}>
+          Ask our AI for hairstyle advice, color suggestions, or product recommendations!
+        </Text>
+      </View>
 
-      <TouchableOpacity
-        style={styles.buttonContainer}
-        onPress={handleGetAdvice}
-        disabled={loading}
-      >
-        <LinearGradient
-          colors={loading ? [theme.colors.textSecondary, theme.colors.border] : [theme.colors.primary, theme.colors.secondary]}
-          style={styles.buttonGradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
+      <View style={styles.content}>
+        <TextInput
+          style={styles.input}
+          placeholder="e.g., What hairstyle suits a round face with curly hair?"
+          placeholderTextColor={theme.colors.textSecondary}
+          value={prompt}
+          onChangeText={setPrompt}
+          multiline
+          numberOfLines={4}
+          editable={!loading}
+        />
+
+        <TouchableOpacity
+          style={[styles.button, loading && styles.disabledButton]}
+          onPress={handleGetAdvice}
+          disabled={loading}
         >
           {loading ? (
-            <ActivityIndicator color={"#FFFFFF"} />
+            <ActivityIndicator color={theme.colors.textPrimary} />
           ) : (
             <Text style={styles.buttonText}>Get Advice</Text>
           )}
-        </LinearGradient>
-      </TouchableOpacity>
+        </TouchableOpacity>
 
-      {error && (
-        <View style={styles.errorCard}>
-          <Text style={styles.errorText}>Error: {error}</Text>
-        </View>
-      )}
-      {response && (
-        <View style={styles.responseCard}>
-          <Text style={styles.responseTextLabel}>AI's Advice:</Text>
-          <Text style={styles.responseText}>{response}</Text>
-        </View>
-      )}
-    </ScrollView>
+        {error && (
+          <View style={styles.errorCard}>
+            <Text style={styles.errorText}>Error: {error}</Text>
+          </View>
+        )}
+        
+        {response && (
+          <View style={styles.responseCard}>
+            <Text style={styles.responseTextLabel}>AI's Advice:</Text>
+            <Text style={styles.responseText}>{response}</Text>
+          </View>
+        )}
+      </View>
+    </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flexGrow: 1,
+    flex: 1,
     backgroundColor: theme.colors.background,
-    paddingHorizontal: theme.spacing.md,
-    paddingTop: theme.spacing.lg,
-    paddingBottom: theme.spacing.lg,
   },
-  title: {
+  logoContainer: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    zIndex: 10,
+  },
+  splashImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+  },
+  header: {
+    backgroundColor: theme.colors.surface,
+    paddingTop: 60,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    ...theme.shadows.medium,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.accentGlow,
+  },
+  headerTitle: {
+    fontSize: theme.fontSizes.xl,
     color: theme.colors.textPrimary,
     fontFamily: theme.fonts.title,
-    fontSize: theme.fontSizes.xl, // Kept xl as it's a screen title
+    fontWeight: 'bold',
     textAlign: 'center',
-    marginBottom: theme.spacing.sm,
+    marginBottom: 8,
   },
-  description: {
+  headerSubtitle: {
+    fontSize: theme.fontSizes.md,
     color: theme.colors.textSecondary,
     fontFamily: theme.fonts.body,
-    fontSize: theme.fontSizes.md,
     textAlign: 'center',
-    marginBottom: theme.spacing.lg,
+  },
+  content: {
+    flex: 1,
+    padding: 20,
   },
   input: {
-    color: theme.colors.textPrimary,
-    backgroundColor: theme.colors.card,
-    borderColor: theme.colors.border,
-    borderWidth: 1,
-    borderRadius: theme.borderRadius.lg, // More pronounced curve
-    padding: theme.spacing.md,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.lg,
+    padding: 16,
     fontSize: theme.fontSizes.md,
-    marginBottom: theme.spacing.md, // Reduced margin slightly
-    minHeight: 120, // Increased height for better multiline input
+    color: theme.colors.textPrimary,
+    fontFamily: theme.fonts.body,
+    borderWidth: 1,
+    borderColor: theme.colors.accentGlow,
+    marginBottom: 20,
+    minHeight: 100,
     textAlignVertical: 'top',
-    placeholderTextColor: theme.colors.textSecondary,
+    ...theme.shadows.soft,
   },
-  buttonContainer: {
+  button: {
+    backgroundColor: theme.colors.primary,
     borderRadius: theme.borderRadius.lg,
-    marginVertical: theme.spacing.lg,
-    // Optional: Adding shadow similar to HomeScreen cards
-    shadowColor: theme.colors.primary,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 6,
-  },
-  buttonGradient: {
-    paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.lg, // More horizontal padding
-    borderRadius: theme.borderRadius.lg,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
     alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 50, // Ensure a good tap target height
+    marginBottom: 20,
+    ...theme.shadows.medium,
+    borderWidth: 1,
+    borderColor: theme.colors.accentGlow,
+  },
+  disabledButton: {
+    backgroundColor: theme.colors.border,
+    opacity: 0.6,
   },
   buttonText: {
-    color: "#FFFFFF", // White text for contrast on gradient
-    fontFamily: theme.fonts.title, // Using title font for button
+    color: theme.colors.textPrimary,
     fontSize: theme.fontSizes.md,
     fontWeight: 'bold',
+    fontFamily: theme.fonts.body,
+  },
+  errorCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.lg,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.error,
+    ...theme.shadows.soft,
+  },
+  errorText: {
+    color: theme.colors.error,
+    fontSize: theme.fontSizes.md,
+    fontFamily: theme.fonts.body,
+    textAlign: 'center',
   },
   responseCard: {
-    backgroundColor: theme.colors.card,
+    backgroundColor: theme.colors.surface,
     borderRadius: theme.borderRadius.lg,
-    borderColor: theme.colors.border,
+    padding: 20,
+    ...theme.shadows.medium,
     borderWidth: 1,
-    padding: theme.spacing.lg, // More padding
-    marginTop: theme.spacing.lg,
-    // Optional: Shadow
-    shadowColor: theme.colors.secondary, // Using secondary for response card shadow
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 4,
+    borderColor: theme.colors.accentGlow,
   },
   responseTextLabel: {
     color: theme.colors.textPrimary,
     fontFamily: theme.fonts.title,
     fontSize: theme.fontSizes.lg,
-    marginBottom: theme.spacing.sm,
+    fontWeight: 'bold',
+    marginBottom: 12,
   },
   responseText: {
     color: theme.colors.textPrimary,
     fontFamily: theme.fonts.body,
     fontSize: theme.fontSizes.md,
-    lineHeight: theme.fontSizes.md * 1.6, // Increased line height
+    lineHeight: 24,
   },
-  errorCard: {
-    backgroundColor: theme.colors.card,
-    borderRadius: theme.borderRadius.lg,
-    borderColor: theme.colors.error, // Error color for border
-    borderWidth: 1,
-    padding: theme.spacing.md,
-    marginTop: theme.spacing.lg,
-    // Optional: Shadow
-    shadowColor: theme.colors.error,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
-    elevation: 4,
-  },
-  errorText: {
-    color: theme.colors.error,
-    fontFamily: theme.fonts.body,
-    fontSize: theme.fontSizes.md,
-    textAlign: 'center',
-  }
 });
 
 export default HairAIScreen;
