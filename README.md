@@ -1,5 +1,5 @@
 # HairNature AI - Intelligent Hair Analysis & Care Platform
-
+26-06-2025
 ## 🌟 Overview
 
 HairNature AI is a comprehensive React Native Expo application that provides AI-powered hair analysis and personalized hair care recommendations. The app combines advanced computer vision technology with expert hair care knowledge to deliver accurate, personalized hair assessments and actionable advice.
