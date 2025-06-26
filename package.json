@@ -35,7 +35,8 @@
     "react-native-web": "~0.19.13",
     "styled-components": "^6.1.19",
     "together-ai": "^0.16.0",
-    "typescript": "~5.3.0"
+    "typescript": "~5.3.0",
+    "expo-dev-client": "~5.0.20"
   },
   "devDependencies": {
     "@babel/core": "^7.24.0",
