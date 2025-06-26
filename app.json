@@ -1,41 +1,44 @@
 {
-  "expo": {
-    "name": "HairAppFresh",
-    "slug": "HairAppFresh",
-    "version": "1.0.0",
-    "orientation": "portrait",
-    "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
-    "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
+  "name": "HairAppFresh",
+  "slug": "HairAppFresh",
+  "owner": "zinzoubardy",
+  "version": "1.0.0",
+  "orientation": "portrait",
+  "icon": "./assets/icon.png",
+  "userInterfaceStyle": "light",
+  "newArchEnabled": true,
+  "splash": {
+    "image": "./assets/splash.png",
+    "resizeMode": "contain",
+    "backgroundColor": "#ffffff"
+  },
+  "ios": {
+    "supportsTablet": true
+  },
+  "android": {
+    "adaptiveIcon": {
+      "foregroundImage": "./assets/adaptive-icon.png",
       "backgroundColor": "#ffffff"
     },
-    "ios": {
-      "supportsTablet": true
-    },
-    "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      },
-      "edgeToEdgeEnabled": true,
-      "package": "com.drzou.rootnglow"
-    },
-    "web": {
-      "favicon": "./assets/favicon.png"
-    },
-    "extra": {
-      "eas": {
-        "projectId": "c2b26dd7-eccf-4d7a-8e79-4cede568901e"
-      }
-    },
-    "sdkVersion": "52.0.0",
-    "platforms": [
-      "ios",
-      "android",
-      "web"
-    ]
-  }
+    "edgeToEdgeEnabled": true,
+    "package": "com.drzou.rootnglow"
+  },
+  "web": {
+    "favicon": "./assets/favicon.png"
+  },
+  "extra": {
+    "eas": {
+      "projectId": "c2b26dd7-eccf-4d7a-8e79-4cede568901e"
+    }
+  },
+  "cli": {
+    "version": ">= 5.9.1",
+    "appVersionSource": "appVersion"
+  },
+  "sdkVersion": "52.0.0",
+  "platforms": [
+    "ios",
+    "android",
+    "web"
+  ]
 }
