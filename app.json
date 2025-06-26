@@ -20,7 +20,6 @@
       "foregroundImage": "./assets/adaptive-icon.png",
       "backgroundColor": "#ffffff"
     },
-    "edgeToEdgeEnabled": true,
     "package": "com.drzou.rootnglow"
   },
   "web": {
@@ -30,10 +29,6 @@
     "eas": {
       "projectId": "c2b26dd7-eccf-4d7a-8e79-4cede568901e"
     }
-  },
-  "cli": {
-    "version": ">= 5.9.1",
-    "appVersionSource": "appVersion"
   },
   "sdkVersion": "52.0.0",
   "platforms": [
