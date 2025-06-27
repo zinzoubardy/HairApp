@@ -1,5 +1,10 @@
-import { TOGETHER_AI_API_KEY } from "../config/apiKeys";
+import { TOGETHER_AI_API_KEY } from '@env';
 import Together from "together-ai";
+
+// Basic error checking for the API key
+if (!TOGETHER_AI_API_KEY) {
+  console.error("Together AI API Key is not provided! Please check your .env configuration.");
+}
 
 const together = new Together({ apiKey: TOGETHER_AI_API_KEY });
 
