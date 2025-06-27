@@ -127,9 +127,7 @@ Be specific about what you actually see in this image.`;
                   },
                   {
                     type: "image_url",
-                    image_url: {
-                      url: imageUrl
-                    }
+                    image_url: imageUrl
                   }
                 ]
               }
@@ -150,11 +148,50 @@ Be specific about what you actually see in this image.`;
           }
         } catch (imageError) {
           console.error(`Error analyzing ${angle} image with vision model:`, imageError);
-          // Continue with other images even if one fails
-          imageAnalyses.push({
-            angle: angle,
-            analysis: `Unable to analyze ${angle} image due to technical issues.`
-          });
+          
+          // Try alternative vision model if first one fails
+          try {
+            console.log(`Trying alternative vision model for ${angle} image...`);
+            const altResponse = await together.chat.completions.create({
+              messages: [
+                {
+                  role: "user",
+                  content: [
+                    {
+                      type: "text",
+                      text: `Describe what you see in this hair image: ${anglePrompt}`
+                    },
+                    {
+                      type: "image_url",
+                      image_url: imageUrl
+                    }
+                  ]
+                }
+              ],
+              model: "meta-llama/Llama-Vision-Free",
+              max_tokens: 400,
+              temperature: 0.5,
+            });
+            
+            if (altResponse && altResponse.choices && altResponse.choices[0] && altResponse.choices[0].message) {
+              imageAnalyses.push({
+                angle: angle,
+                analysis: altResponse.choices[0].message.content
+              });
+              console.log(`${angle} alternative vision analysis complete:`, altResponse.choices[0].message.content.substring(0, 100) + "...");
+            } else {
+              imageAnalyses.push({
+                angle: angle,
+                analysis: `Unable to analyze ${angle} image due to technical issues.`
+              });
+            }
+          } catch (altError) {
+            console.error(`Alternative vision model also failed for ${angle} image:`, altError);
+            imageAnalyses.push({
+              angle: angle,
+              analysis: `Unable to analyze ${angle} image due to technical issues.`
+            });
+          }
         }
       }
       
