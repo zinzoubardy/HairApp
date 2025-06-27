@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Modal, Fla
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import theme from '../styles/theme';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { getProfile, getHairAnalysisResult } from '../services/SupabaseService';
+import { getProfile, getHairAnalysisResult, getTrendingRecipes } from '../services/SupabaseService';
 import { getHairAnalysis, saveHairAnalysisResult } from '../services/AIService';
 
 const { width } = Dimensions.get('window');
@@ -52,11 +52,6 @@ const defaultRecommendations = [
   { icon: 'analytics', text: 'Get AI-powered hair analysis' },
   { icon: 'bulb', text: 'Receive personalized recommendations' },
 ];
-const trendingRecipes = [
-  { id: 1, title: 'Henna Gloss', image: require('../../assets/sample.png'), details: 'A nourishing henna gloss recipe...' },
-  { id: 2, title: 'Aloe Vera Mask', image: require('../../assets/sample.png'), details: 'A soothing aloe vera mask...' },
-  { id: 3, title: 'Coconut Deep Conditioner', image: require('../../assets/sample.png'), details: 'Deeply condition with coconut...' },
-];
 
 const HomeScreen = () => {
   const navigation = useNavigation();
@@ -66,6 +61,8 @@ const HomeScreen = () => {
   const [profile, setProfile] = useState(null);
   const [analysis, setAnalysis] = useState(null);
   const [analysing, setAnalysing] = useState(false);
+  const [trendingRecipes, setTrendingRecipes] = useState([]);
+  const [recipesLoading, setRecipesLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -89,9 +86,25 @@ const HomeScreen = () => {
     setLoading(false);
   }, []);
 
+  const fetchRecipes = useCallback(async () => {
+    setRecipesLoading(true);
+    try {
+      const { data: recipes, error } = await getTrendingRecipes(6);
+      if (error) {
+        console.error('Error fetching recipes:', error);
+      } else {
+        setTrendingRecipes(recipes || []);
+      }
+    } catch (error) {
+      console.error('Error fetching recipes:', error);
+    }
+    setRecipesLoading(false);
+  }, []);
+
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+    fetchRecipes();
+  }, [fetchData, fetchRecipes]);
 
   // Refresh data when screen comes into focus, but only if we have a profile
   useFocusEffect(
@@ -167,6 +180,7 @@ const HomeScreen = () => {
         scalpAnalysis: defaultScalpAnalysis,
         colorAnalysis: defaultColorAnalysis,
         recommendations: defaultRecommendations,
+        analysisFailed: false,
       };
     }
 
@@ -183,6 +197,7 @@ const HomeScreen = () => {
         scalpAnalysis: defaultScalpAnalysis,
         colorAnalysis: defaultColorAnalysis,
         recommendations: defaultRecommendations,
+        analysisFailed: true,
       };
     }
 
@@ -193,11 +208,35 @@ const HomeScreen = () => {
         scalpAnalysis: defaultScalpAnalysis,
         colorAnalysis: defaultColorAnalysis,
         recommendations: defaultRecommendations,
+        analysisFailed: true,
       };
     }
 
     // Parse the text-based AI response
     const parseAnalysisText = (text) => {
+      // Detect analysis failure
+      const lowerText = text.toLowerCase();
+      const failureIndicators = [
+        'unable to analyze',
+        'technical issues',
+        'cannot provide',
+        'no data',
+        'general advice',
+        'not tailored',
+        'without the ability to analyze',
+        'lack of analytical data',
+        'no specific observations',
+        'no analysis',
+        'not analyzed',
+        'not available',
+        'not enough information',
+        'not enough data',
+        'no images',
+        'images were not analyzed',
+        'analysis failed',
+      ];
+      const analysisFailed = failureIndicators.some(indicator => lowerText.includes(indicator));
+
       console.log('=== PARSING DEBUG START ===');
       console.log('Raw text to parse:', text);
       
@@ -214,6 +253,7 @@ const HomeScreen = () => {
           summary: 'Analysis completed',
         },
         recommendations: [],
+        analysisFailed,
       };
 
       try {
@@ -304,10 +344,12 @@ const HomeScreen = () => {
                 'strawberry blonde': { name: 'Strawberry Blonde', hex: '#E8B4B8', reference: 'Similar to L\'Oréal Feria #7.4' }
               };
               
-              const referenceColor = detectedColor ? 
-                colorReference[detectedColor.toLowerCase()] || 
-                { name: detectedColor, hex: '#8D6E63', reference: 'Professional color reference' } :
-                { name: 'Dark Brown', hex: '#5D4037', reference: 'Similar to L\'Oréal Excellence Creme #3' };
+              let referenceColor = null;
+              if (detectedColor && colorReference[detectedColor.toLowerCase()]) {
+                referenceColor = colorReference[detectedColor.toLowerCase()];
+              } else if (detectedColor) {
+                referenceColor = { name: detectedColor };
+              }
               
               result.colorAnalysis = {
                 icon: 'palette',
@@ -414,13 +456,38 @@ const HomeScreen = () => {
     );
   }
 
+  // If analysis failed, show a clear message and hide results
+  if (analysisData.analysisFailed) {
+    return (
+      <View style={styles.root}>
+        
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.centralLogoContainer}>
+          <Image source={require('../../assets/splash.png')} style={styles.bigLogo} />
+        </View>
+          <View style={styles.globalBox}>
+            <Text style={styles.globalTitle}>Analysis Unavailable</Text>
+            <Text style={{ color: theme.colors.error, fontSize: theme.fontSizes.md, textAlign: 'center', marginTop: 16 }}>
+              We could not analyze your images due to technical issues. Please try again or upload new images.
+            </Text>
+          </View>
+          <TouchableOpacity 
+            style={styles.analyseButton}
+            onPress={handleAnalyseNow}
+          >
+            <Text style={styles.analyseButtonText}>Try Analysis Again</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
+    );
+  }
+
   // If no analysis yet, show Analyse Now prompt
   if (!analysis) {
     return (
       <View style={styles.root}>
-        {/* Logo in top right */}
-        <View style={styles.logoContainer}>
-          <Image source={require('../../assets/splash.png')} style={styles.splashImage} />
+        <View style={styles.centralLogoContainer}>
+          <Image source={require('../../assets/splash.png')} style={styles.BigLogo} />
         </View>
 
         <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -440,7 +507,7 @@ const HomeScreen = () => {
               <MaterialCommunityIcons name={analysisData.colorAnalysis.icon} size={32} color={theme.colors.accent} />
               <Text style={styles.splitTitle}>Color</Text>
               <Text style={styles.splitStatus}>{analysisData.colorAnalysis.status}</Text>
-              {analysisData.colorAnalysis.detectedColor ? (
+              {analysisData.colorAnalysis.colorHex ? (
                 <View style={styles.colorInfoContainer}>
                   <View 
                     style={[
@@ -480,18 +547,29 @@ const HomeScreen = () => {
           {/* Trending Recipes */}
           <View style={styles.trendingBox}>
             <Text style={styles.trendingTitle}>Trending Recipes</Text>
-            <FlatList
-              data={trendingRecipes}
-              keyExtractor={item => item.id.toString()}
-              renderItem={({ item }) => (
-                <TouchableOpacity style={styles.recipeItem} onPress={() => handleRecipePress(item)}>
-                  <Image source={item.image} style={styles.recipeImage} />
-                  <Text style={styles.recipeTitle}>{item.title}</Text>
-                </TouchableOpacity>
-              )}
-              horizontal={false}
-              scrollEnabled={false}
-            />
+            {recipesLoading ? (
+              <ActivityIndicator size="small" color={theme.colors.primary} style={{ marginVertical: 20 }} />
+            ) : trendingRecipes.length > 0 ? (
+              <FlatList
+                data={trendingRecipes}
+                keyExtractor={item => item.id}
+                renderItem={({ item }) => (
+                  <TouchableOpacity style={styles.recipeItem} onPress={() => handleRecipePress(item)}>
+                    <Image 
+                      source={require('../../assets/splash.png')} 
+                      style={styles.recipeImage} 
+                    />
+                    <Text style={styles.recipeTitle} numberOfLines={2} ellipsizeMode="tail">
+                      {item.title}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                horizontal={false}
+                scrollEnabled={false}
+              />
+            ) : (
+              <Text style={styles.noRecipesText}>No recipes available at the moment.</Text>
+            )}
           </View>
 
           {/* Analyse Now Button */}
@@ -513,9 +591,80 @@ const HomeScreen = () => {
           <View style={styles.recipeModalOverlay}>
             <View style={styles.recipeModalBox}>
               <Text style={styles.recipeModalTitle}>{selectedRecipe?.title}</Text>
-              <Text style={styles.recipeModalDetails}>{selectedRecipe?.details}</Text>
+              <Text style={styles.recipeModalDescription}>{selectedRecipe?.short_description}</Text>
+              
+              {selectedRecipe?.ingredients && (
+                <View style={styles.recipeSection}>
+                  <Text style={styles.recipeSectionTitle}>Ingredients:</Text>
+                  {selectedRecipe.ingredients.map((ingredient, index) => (
+                    <Text key={index} style={styles.recipeIngredient}>
+                      • {ingredient.name}: {ingredient.amount}
+                    </Text>
+                  ))}
+                </View>
+              )}
+              
+              {selectedRecipe?.instructions && (
+                <View style={styles.recipeSection}>
+                  <Text style={styles.recipeSectionTitle}>Instructions:</Text>
+                  {(() => {
+                    console.log('DEBUG: instructions type:', typeof selectedRecipe.instructions);
+                    console.log('DEBUG: instructions value:', selectedRecipe.instructions);
+                    
+                    let instructionsArray = [];
+                    if (Array.isArray(selectedRecipe.instructions)) {
+                      // Handle the malformed array from failed migration
+                      const firstItem = selectedRecipe.instructions[0];
+                      if (firstItem === '[') {
+                        // This is the malformed case - try to reconstruct the JSON
+                        const jsonString = selectedRecipe.instructions.join('\n');
+                        try {
+                          const parsed = JSON.parse(jsonString);
+                          instructionsArray = Array.isArray(parsed) ? parsed : [];
+                        } catch (e) {
+                          // Fallback: filter out brackets and quotes, clean up the array
+                          instructionsArray = selectedRecipe.instructions
+                            .filter(item => item !== '[' && item !== ']' && item.trim() !== '')
+                            .map(item => item.replace(/^[\s"]+|[\s"]+$/g, '')) // Remove quotes and whitespace
+                            .filter(item => item.length > 0);
+                        }
+                      } else {
+                        instructionsArray = selectedRecipe.instructions;
+                      }
+                    } else if (typeof selectedRecipe.instructions === 'string') {
+                      // Try to parse as JSON if it's still a string
+                      try {
+                        const parsed = JSON.parse(selectedRecipe.instructions);
+                        instructionsArray = Array.isArray(parsed) ? parsed : [selectedRecipe.instructions];
+                      } catch (e) {
+                        // Split by newlines if JSON parsing fails
+                        instructionsArray = selectedRecipe.instructions.split('\n').filter(line => line.trim());
+                      }
+                    }
+                    
+                    return instructionsArray.map((instruction, index) => (
+                      <Text key={index} style={styles.recipeInstruction}>
+                        {index + 1}. {instruction}
+                      </Text>
+                    ));
+                  })()}
+                </View>
+              )}
+              
+              {selectedRecipe?.preparation_time_minutes && (
+                <Text style={styles.recipeTime}>
+                  ⏱️ Preparation time: {selectedRecipe.preparation_time_minutes} minutes
+                </Text>
+              )}
+              
+              {selectedRecipe?.difficulty && (
+                <Text style={styles.recipeDifficulty}>
+                  📊 Difficulty: {selectedRecipe.difficulty}
+                </Text>
+              )}
+              
               <TouchableOpacity style={styles.recipeModalClose} onPress={handleRecipeClose}>
-                <Text style={{ color: theme.colors.primary, fontWeight: 'bold' }}>Close</Text>
+                <Text style={{ color: '#FFFFFF', fontWeight: 'bold' }}>Close</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -526,12 +675,12 @@ const HomeScreen = () => {
 
   return (
     <View style={styles.root}>
-      {/* Logo in top right */}
-      <View style={styles.logoContainer}>
-        <Image source={require('../../assets/splash.png')} style={styles.splashImage} />
-      </View>
+      
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
+      <View style={styles.centralLogoContainer}>
+        <Image source={require('../../assets/splash.png')} style={styles.bigLogo} />
+      </View>
         {/* Global Hair State */}
         <View style={styles.globalBox}>
           <Text style={styles.globalTitle}>Overall Hair Health</Text>
@@ -548,7 +697,7 @@ const HomeScreen = () => {
             <MaterialCommunityIcons name={analysisData.colorAnalysis.icon} size={32} color={theme.colors.accent} />
             <Text style={styles.splitTitle}>Color</Text>
             <Text style={styles.splitStatus}>{analysisData.colorAnalysis.status}</Text>
-            {analysisData.colorAnalysis.detectedColor ? (
+            {analysisData.colorAnalysis.colorHex ? (
               <View style={styles.colorInfoContainer}>
                 <View 
                   style={[
@@ -588,18 +737,29 @@ const HomeScreen = () => {
         {/* Trending Recipes */}
         <View style={styles.trendingBox}>
           <Text style={styles.trendingTitle}>Trending Recipes</Text>
-          <FlatList
-            data={trendingRecipes}
-            keyExtractor={item => item.id.toString()}
-            renderItem={({ item }) => (
-              <TouchableOpacity style={styles.recipeItem} onPress={() => handleRecipePress(item)}>
-                <Image source={item.image} style={styles.recipeImage} />
-                <Text style={styles.recipeTitle}>{item.title}</Text>
-              </TouchableOpacity>
-            )}
-            horizontal={false}
-            scrollEnabled={false}
-          />
+          {recipesLoading ? (
+            <ActivityIndicator size="small" color={theme.colors.primary} style={{ marginVertical: 20 }} />
+          ) : trendingRecipes.length > 0 ? (
+            <FlatList
+              data={trendingRecipes}
+              keyExtractor={item => item.id}
+              renderItem={({ item }) => (
+                <TouchableOpacity style={styles.recipeItem} onPress={() => handleRecipePress(item)}>
+                  <Image 
+                    source={require('../../assets/splash.png')} 
+                    style={styles.recipeImage} 
+                  />
+                  <Text style={styles.recipeTitle} numberOfLines={2} ellipsizeMode="tail">
+                    {item.title}
+                  </Text>
+                </TouchableOpacity>
+              )}
+              horizontal={false}
+              scrollEnabled={false}
+            />
+          ) : (
+            <Text style={styles.noRecipesText}>No recipes available at the moment.</Text>
+          )}
         </View>
       </ScrollView>
 
@@ -608,9 +768,80 @@ const HomeScreen = () => {
         <View style={styles.recipeModalOverlay}>
           <View style={styles.recipeModalBox}>
             <Text style={styles.recipeModalTitle}>{selectedRecipe?.title}</Text>
-            <Text style={styles.recipeModalDetails}>{selectedRecipe?.details}</Text>
+            <Text style={styles.recipeModalDescription}>{selectedRecipe?.short_description}</Text>
+            
+            {selectedRecipe?.ingredients && (
+              <View style={styles.recipeSection}>
+                <Text style={styles.recipeSectionTitle}>Ingredients:</Text>
+                {selectedRecipe.ingredients.map((ingredient, index) => (
+                  <Text key={index} style={styles.recipeIngredient}>
+                    • {ingredient.name}: {ingredient.amount}
+                  </Text>
+                ))}
+              </View>
+            )}
+            
+            {selectedRecipe?.instructions && (
+              <View style={styles.recipeSection}>
+                <Text style={styles.recipeSectionTitle}>Instructions:</Text>
+                {(() => {
+                  console.log('DEBUG: instructions type:', typeof selectedRecipe.instructions);
+                  console.log('DEBUG: instructions value:', selectedRecipe.instructions);
+                  
+                  let instructionsArray = [];
+                  if (Array.isArray(selectedRecipe.instructions)) {
+                    // Handle the malformed array from failed migration
+                    const firstItem = selectedRecipe.instructions[0];
+                    if (firstItem === '[') {
+                      // This is the malformed case - try to reconstruct the JSON
+                      const jsonString = selectedRecipe.instructions.join('\n');
+                      try {
+                        const parsed = JSON.parse(jsonString);
+                        instructionsArray = Array.isArray(parsed) ? parsed : [];
+                      } catch (e) {
+                        // Fallback: filter out brackets and quotes, clean up the array
+                        instructionsArray = selectedRecipe.instructions
+                          .filter(item => item !== '[' && item !== ']' && item.trim() !== '')
+                          .map(item => item.replace(/^[\s"]+|[\s"]+$/g, '')) // Remove quotes and whitespace
+                          .filter(item => item.length > 0);
+                      }
+                    } else {
+                      instructionsArray = selectedRecipe.instructions;
+                    }
+                  } else if (typeof selectedRecipe.instructions === 'string') {
+                    // Try to parse as JSON if it's still a string
+                    try {
+                      const parsed = JSON.parse(selectedRecipe.instructions);
+                      instructionsArray = Array.isArray(parsed) ? parsed : [selectedRecipe.instructions];
+                    } catch (e) {
+                      // Split by newlines if JSON parsing fails
+                      instructionsArray = selectedRecipe.instructions.split('\n').filter(line => line.trim());
+                    }
+                  }
+                  
+                  return instructionsArray.map((instruction, index) => (
+                    <Text key={index} style={styles.recipeInstruction}>
+                      {index + 1}. {instruction}
+                    </Text>
+                  ));
+                })()}
+              </View>
+            )}
+            
+            {selectedRecipe?.preparation_time_minutes && (
+              <Text style={styles.recipeTime}>
+                ⏱️ Preparation time: {selectedRecipe.preparation_time_minutes} minutes
+              </Text>
+            )}
+            
+            {selectedRecipe?.difficulty && (
+              <Text style={styles.recipeDifficulty}>
+                📊 Difficulty: {selectedRecipe.difficulty}
+              </Text>
+            )}
+            
             <TouchableOpacity style={styles.recipeModalClose} onPress={handleRecipeClose}>
-              <Text style={{ color: theme.colors.primary, fontWeight: 'bold' }}>Close</Text>
+              <Text style={{ color: '#FFFFFF', fontWeight: 'bold' }}>Close</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -625,15 +856,15 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background,
   },
   scrollContent: {
-    paddingTop: 80,
-    paddingBottom: 40,
+    paddingTop: 60,
+    paddingBottom: 30,
     paddingHorizontal: 20,
   },
   globalBox: {
     borderRadius: theme.borderRadius.lg,
-    padding: 24,
+    padding: 20,
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 20,
     backgroundColor: theme.colors.surface,
     ...theme.shadows.medium,
     borderWidth: 1,
@@ -762,6 +993,8 @@ const styles = StyleSheet.create({
     borderRadius: theme.borderRadius.md,
     padding: 12,
     marginBottom: 10,
+    height: 80,
+    minHeight: 80,
     ...theme.shadows.soft,
     borderWidth: 1,
     borderColor: theme.colors.accent,
@@ -777,6 +1010,8 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     fontFamily: theme.fonts.body,
     fontWeight: '600',
+    flex: 1,
+    flexWrap: 'wrap',
   },
   analyseButton: {
     backgroundColor: theme.colors.primary,
@@ -819,11 +1054,11 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     fontWeight: 'bold',
   },
-  recipeModalDetails: {
+  recipeModalDescription: {
     fontSize: theme.fontSizes.body,
     color: theme.colors.textSecondary,
     fontFamily: theme.fonts.body,
-    marginBottom: 20,
+    marginBottom: 16,
     lineHeight: 20,
   },
   recipeModalClose: {
@@ -920,27 +1155,82 @@ const styles = StyleSheet.create({
   colorInfo: {
     flex: 1,
   },
-  colorName: {
-    fontSize: theme.fontSizes.body,
-    color: theme.colors.textPrimary,
-    fontWeight: 'bold',
-    marginBottom: 4,
-    fontFamily: theme.fonts.body,
+  centralLogoContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 0,
+    marginBottom: 0,
   },
-  colorReference: {
-    fontSize: theme.fontSizes.sm,
+  centralLogo: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    marginBottom: 0,
+  },
+  centralLogoLarge: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    alignSelf: 'center',
+    marginBottom: 4,
+  },
+  appName: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: theme.colors.primary,
+    fontFamily: theme.fonts.title,
+    textAlign: 'center',
+    letterSpacing: 1.2,
+  },
+  bigLogo: {
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    alignSelf: 'center',
+    marginBottom: 0,
+  },
+  noRecipesText: {
+    fontSize: theme.fontSizes.body,
     color: theme.colors.textSecondary,
     fontFamily: theme.fonts.body,
+    textAlign: 'center',
+    marginVertical: 20,
   },
-  logoContainer: {
-    position: 'absolute',
-    top: 20,
-    right: 20,
+  recipeSection: {
+    marginBottom: 16,
   },
-  splashImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  recipeSectionTitle: {
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.textPrimary,
+    fontFamily: theme.fonts.title,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  recipeIngredient: {
+    fontSize: theme.fontSizes.body,
+    color: theme.colors.textPrimary,
+    fontFamily: theme.fonts.body,
+    marginBottom: 4,
+    paddingLeft: 8,
+  },
+  recipeInstruction: {
+    fontSize: theme.fontSizes.body,
+    color: theme.colors.textPrimary,
+    fontFamily: theme.fonts.body,
+    marginBottom: 8,
+    lineHeight: 18,
+  },
+  recipeTime: {
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.accent,
+    fontFamily: theme.fonts.body,
+    marginBottom: 4,
+  },
+  recipeDifficulty: {
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.accent,
+    fontFamily: theme.fonts.body,
+    marginBottom: 16,
   },
 });
 

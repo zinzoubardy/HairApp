@@ -1,12 +1,24 @@
 import { TOGETHER_AI_API_KEY } from '@env';
 import Together from "together-ai";
+import Constants from 'expo-constants';
 
 // Basic error checking for the API key
 if (!TOGETHER_AI_API_KEY) {
   console.error("Together AI API Key is not provided! Please check your .env configuration.");
 }
 
-const together = new Together({ apiKey: TOGETHER_AI_API_KEY });
+const getTogetherApiKey = () => {
+  const expoKey = Constants?.expoConfig?.extra?.TOGETHER_API_KEY;
+  const envKey = process.env.TOGETHER_API_KEY;
+  console.log('DEBUG Together API Key (expoConfig.extra):', expoKey);
+  console.log('DEBUG Together API Key (process.env):', envKey);
+  if (expoKey) {
+    return expoKey;
+  }
+  return envKey;
+};
+
+const together = new Together({ apiKey: getTogetherApiKey() });
 
 export const getAIHairstyleAdvice = async (prompt) => {
   if (!prompt || typeof prompt !== 'string' || prompt.trim() === "") {
@@ -79,128 +91,92 @@ export const getAIHairstyleAdvice = async (prompt) => {
   }
 };
 
-export const getHairAnalysis = async (profileData, imageReferences) => {
-  if (!imageReferences || Object.keys(imageReferences).length === 0) {
-    return { success: false, error: "Image references are required for analysis." };
+export const getHairAnalysis = async (profile, imageReferences) => {
+  if (!imageReferences || !imageReferences.up || !imageReferences.back || !imageReferences.left || !imageReferences.right) {
+    return { success: false, error: 'All four image angles are required.' };
+  }
+
+  const angles = ['up', 'back', 'left', 'right'];
+  const imageAnalyses = [];
+
+  for (const angle of angles) {
+    const imageUrl = imageReferences[angle];
+    const anglePrompt = `Analyze the ${angle} view of the user\'s hair. Focus on texture, scalp, color, and any visible issues.`;
+    try {
+      console.log(`Sending vision model request for ${angle}:`, imageUrl);
+      const response = await together.chat.completions.create({
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: anglePrompt },
+              { type: "image_url", image_url: { url: imageUrl } }
+            ]
+          }
+        ],
+        model: "meta-llama/Llama-Vision-Free",
+        max_tokens: 500,
+        temperature: 0.7,
+      });
+      console.log(`Vision model response for ${angle}:`, response);
+      if (response && response.choices && response.choices[0] && response.choices[0].message) {
+        imageAnalyses.push({
+          angle: angle,
+          analysis: response.choices[0].message.content
+        });
+        console.log(`${angle} vision analysis complete:`, response.choices[0].message.content.substring(0, 100) + "...");
+      } else {
+        console.warn(`No valid response for ${angle} image`);
+      }
+    } catch (imageError) {
+      console.error(`Error analyzing ${angle} image with vision model:`, imageError);
+      // Try alternative vision model if first one fails
+      try {
+        console.log(`Trying alternative vision model for ${angle} image...`);
+        const altResponse = await together.chat.completions.create({
+          messages: [
+            {
+              role: "user",
+              content: [
+                { type: "text", text: `Describe what you see in this hair image: ${anglePrompt}` },
+                { type: "image_url", image_url: { url: imageUrl } }
+              ]
+            }
+          ],
+          model: "meta-llama/Llama-Vision-Free",
+          max_tokens: 400,
+          temperature: 0.5,
+        });
+        console.log(`Alternative vision model response for ${angle}:`, altResponse);
+        if (altResponse && altResponse.choices && altResponse.choices[0] && altResponse.choices[0].message) {
+          imageAnalyses.push({
+            angle: angle,
+            analysis: altResponse.choices[0].message.content
+          });
+          console.log(`${angle} alternative vision analysis complete:`, altResponse.choices[0].message.content.substring(0, 100) + "...");
+        } else {
+          imageAnalyses.push({
+            angle: angle,
+            analysis: `Unable to analyze ${angle} image due to technical issues.`
+          });
+        }
+      } catch (altError) {
+        console.error(`Alternative vision model also failed for ${angle} image:`, altError);
+        imageAnalyses.push({
+          angle: angle,
+          analysis: `Unable to analyze ${angle} image due to technical issues.`
+        });
+      }
+    }
   }
 
   try {
-    console.log("Starting hair analysis with vision model...");
+    console.log("Vision model analysis successful, combining results...");
     
-    // Try vision model first - this is the only way to actually see the images
-    try {
-      console.log("Attempting vision model analysis...");
-      
-      // Analyze each image separately using the vision model
-      const imageAnalyses = [];
-      const imageKeys = Object.keys(imageReferences);
-      
-      for (const angle of imageKeys) {
-        const imageUrl = imageReferences[angle];
-        if (!imageUrl) continue;
-        
-        console.log(`Analyzing ${angle} image with vision model:`, imageUrl);
-        
-        const anglePrompt = `Analyze this hair image from the ${angle} angle. Look at the actual image and describe what you see:
-- Hair texture and pattern
-- Hair density and thickness
-- Visible damage, split ends, or frizz
-- Hair shine and moisture levels
-- Scalp condition
-- Hair color and any variations
-- Volume and body
-- Any styling or treatment evidence
-- Hair length and shape
-- Any specific concerns
-
-Be specific about what you actually see in this image.`;
-        
-        try {
-          const response = await together.chat.completions.create({
-            messages: [
-              {
-                role: "user",
-                content: [
-                  {
-                    type: "text",
-                    text: anglePrompt
-                  },
-                  {
-                    type: "image_url",
-                    image_url: imageUrl
-                  }
-                ]
-              }
-            ],
-            model: "meta-llama/Llama-Vision-Free",
-            max_tokens: 500,
-            temperature: 0.7,
-          });
-          
-          if (response && response.choices && response.choices[0] && response.choices[0].message) {
-            imageAnalyses.push({
-              angle: angle,
-              analysis: response.choices[0].message.content
-            });
-            console.log(`${angle} vision analysis complete:`, response.choices[0].message.content.substring(0, 100) + "...");
-          } else {
-            console.warn(`No valid response for ${angle} image`);
-          }
-        } catch (imageError) {
-          console.error(`Error analyzing ${angle} image with vision model:`, imageError);
-          
-          // Try alternative vision model if first one fails
-          try {
-            console.log(`Trying alternative vision model for ${angle} image...`);
-            const altResponse = await together.chat.completions.create({
-              messages: [
-                {
-                  role: "user",
-                  content: [
-                    {
-                      type: "text",
-                      text: `Describe what you see in this hair image: ${anglePrompt}`
-                    },
-                    {
-                      type: "image_url",
-                      image_url: imageUrl
-                    }
-                  ]
-                }
-              ],
-              model: "meta-llama/Llama-Vision-Free",
-              max_tokens: 400,
-              temperature: 0.5,
-            });
-            
-            if (altResponse && altResponse.choices && altResponse.choices[0] && altResponse.choices[0].message) {
-              imageAnalyses.push({
-                angle: angle,
-                analysis: altResponse.choices[0].message.content
-              });
-              console.log(`${angle} alternative vision analysis complete:`, altResponse.choices[0].message.content.substring(0, 100) + "...");
-            } else {
-              imageAnalyses.push({
-                angle: angle,
-                analysis: `Unable to analyze ${angle} image due to technical issues.`
-              });
-            }
-          } catch (altError) {
-            console.error(`Alternative vision model also failed for ${angle} image:`, altError);
-            imageAnalyses.push({
-              angle: angle,
-              analysis: `Unable to analyze ${angle} image due to technical issues.`
-            });
-          }
-        }
-      }
-      
-      // If we have some successful analyses, proceed with combination
-      if (imageAnalyses.length > 0) {
-        console.log("Vision model analysis successful, combining results...");
-        
-        // Now combine all analyses into a comprehensive report
-        const combinedPrompt = `Based on the individual image analyses below, create a comprehensive hair analysis report:
+    if (imageAnalyses.length > 0) {
+      console.log("Vision model analysis successful, combining results...");
+      // Now combine all analyses into a comprehensive report
+      const combinedPrompt = `Based on the individual image analyses below, create a comprehensive hair analysis report:
 
 INDIVIDUAL IMAGE ANALYSES:
 ${imageAnalyses.map(analysis => `**${analysis.angle.toUpperCase()} VIEW:**\n${analysis.analysis}`).join('\n\n')}
@@ -222,61 +198,33 @@ List specific observations and potential issues based on the analyses above.
 **5. Recommendations:**
 Provide 3-5 actionable recommendations based on the analyses above. For each recommendation, suggest a simple keyword for an icon.
 Format: "Recommendation: [advice]. IconHint: [icon-keyword]"`;
-        
-        const finalResponse = await together.chat.completions.create({
-          messages: [{ role: 'user', content: combinedPrompt }],
-          model: 'meta-llama/Llama-3.3-70B-Instruct-Turbo-Free',
-          max_tokens: 1500,
-          temperature: 0.7,
-        });
 
-        if (finalResponse && finalResponse.choices && finalResponse.choices[0] && finalResponse.choices[0].message) {
-          return { success: true, data: finalResponse.choices[0].message.content };
-        }
+      const finalResponse = await together.chat.completions.create({
+        messages: [{ role: 'user', content: combinedPrompt }],
+        model: 'meta-llama/Llama-3.3-70B-Instruct-Turbo-Free',
+        max_tokens: 1500,
+        temperature: 0.7,
+      });
+
+      if (finalResponse && finalResponse.choices && finalResponse.choices[0] && finalResponse.choices[0].message) {
+        return { success: true, data: finalResponse.choices[0].message.content };
       }
-    } catch (visionError) {
-      console.error("Vision model analysis failed:", visionError);
     }
-    
     // If vision model fails completely, use a very direct text approach
     console.log("Using direct text model analysis...");
-    
-    let prompt = `You are analyzing hair images. The user has provided these image URLs:
-
-`;
-    
+    let prompt = `You are analyzing hair images. The user has provided these image URLs:\n\n`;
     if (imageReferences.up) prompt += `Top view: ${imageReferences.up}\n`;
     if (imageReferences.back) prompt += `Back view: ${imageReferences.back}\n`;
     if (imageReferences.left) prompt += `Left view: ${imageReferences.left}\n`;
     if (imageReferences.right) prompt += `Right view: ${imageReferences.right}\n`;
-
-    prompt += `
-You need to analyze these hair images. Since you cannot directly view images, please provide a general analysis structure that the user can fill in based on what they observe in their own images.
-
-**1. Global Hair State Score:**
-[User should examine their images and provide a score based on what they see]
-
-**2. Detailed Scalp Analysis:**
-[User should describe what they observe about their scalp in the images]
-
-**3. Detailed Color Analysis:**
-[User should describe the hair color they see in the images]
-
-**4. Key Observations & Potential Issues:**
-[User should list specific observations from their images]
-
-**5. Recommendations:**
-[User should provide recommendations based on their observations]`;
-
+    prompt += `\nYou need to analyze these hair images. Since you cannot directly view images, please provide a general analysis structure that the user can fill in based on what they observe in their own images.\n\n**1. Global Hair State Score:**\n[User should examine their images and provide a score based on what they see]\n\n**2. Detailed Scalp Analysis:**\n[User should describe what they observe about their scalp in the images]\n\n**3. Detailed Color Analysis:**\n[User should describe the hair color they see in the images]\n\n**4. Key Observations & Potential Issues:**\n[User should list specific observations from their images]\n\n**5. Recommendations:**\n[User should provide recommendations based on their observations]`;
     const response = await together.chat.completions.create({
       messages: [{ role: 'user', content: prompt }],
       model: 'meta-llama/Llama-3.3-70B-Instruct-Turbo-Free',
       max_tokens: 1500,
       temperature: 0.7,
     });
-
     console.log("Received hair analysis response:", response);
-    
     if (response && response.choices && response.choices[0] && response.choices[0].message) {
       return { success: true, data: response.choices[0].message.content };
     } else {
@@ -345,6 +293,53 @@ export const getGeneralHairAnalysis = async (imageUrl, question) => {
   } catch (error) {
     console.error("Error calling Together AI API for general analysis:", error);
     return { success: false, error: error.message || "An unknown error occurred with the AI service." };
+  }
+};
+
+// Call Together AI to generate a personalized routine from analysis data
+export const callTogetherAIForRoutine = async (analysisData) => {
+  const together = new Together({ apiKey: getTogetherApiKey() });
+  const prompt = `You are a professional hair care assistant. Based on the following hair analysis, generate a personalized daily and weekly hair care routine.\n\nRequirements:\n- The routine must have AT LEAST 3 steps.\n- Each step must have a clear title and a detailed description.\n- The response MUST be valid JSON in the following format:\n{\n  \"title\": \"string\",\n  \"steps\": [\n    { \"title\": \"string\", \"description\": \"string\" },\n    ...\n  ]\n}\n- Do NOT include any markdown, explanations, or extra text.\n\nHair Analysis:\n${JSON.stringify(analysisData, null, 2)}`;
+
+  try {
+    const response = await together.chat.completions.create({
+      messages: [
+        { role: 'user', content: prompt },
+      ],
+      model: 'deepseek-ai/DeepSeek-R1-Distill-Llama-70B-free',
+    });
+    let aiText = response.choices?.[0]?.message?.content || '';
+    console.log('Raw AI routine response:', aiText);
+    let routineObj = null;
+    // Try to extract the first JSON object from the response
+    const jsonStart = aiText.indexOf('{');
+    const jsonEnd = aiText.lastIndexOf('}');
+    if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+      const jsonString = aiText.substring(jsonStart, jsonEnd + 1);
+      try {
+        routineObj = JSON.parse(jsonString);
+      } catch (e) {
+        // Fallback to old logic below
+      }
+    }
+    if (!routineObj) {
+      // Try to extract steps from plain text
+      const steps = aiText.split(/\n\d+\.|\n- |\n\*/).filter(s => s.trim().length > 0);
+      routineObj = {
+        title: 'Personalized Routine',
+        steps: steps.map((step, i) => ({ title: `Step ${i + 1}`, description: step.trim() })),
+      };
+    }
+    // Only accept if at least 2 steps with non-empty descriptions
+    const validSteps = routineObj.steps?.filter(s => s.description && s.description.trim().length > 0) || [];
+    if (validSteps.length < 2) {
+      return { error: 'Technical issue, try again a bit later.' };
+    }
+    routineObj.steps = validSteps;
+    return routineObj;
+  } catch (e) {
+    console.log('Routine AI call error:', e);
+    return { error: 'Technical issue, try again a bit later.' };
   }
 };
 

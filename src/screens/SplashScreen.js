@@ -12,16 +12,12 @@ const SplashScreen = () => {
 
   return (
     <View style={styles.container}>
-      <View style={styles.logoContainer}>
-        <Image 
-          source={require('../../assets/splash.png')} 
-          style={styles.logo}
-          resizeMode="contain"
-        />
+      <View style={styles.centralLogoContainer}>
+        <Image source={require('../../assets/splash.png')} style={styles.bigLogo} />
       </View>
       
       <View style={styles.content}>
-        <Text style={styles.title}>Welcome to HairNature AI</Text>
+        <Text style={styles.title}>Welcome to Root & Glow</Text>
         <Text style={styles.subtitle}>
           Discover your hair's natural potential with AI-powered analysis and personalized recommendations
         </Text>
@@ -43,10 +39,18 @@ const styles = StyleSheet.create({
     paddingVertical: 60,
     paddingHorizontal: 40,
   },
-  logoContainer: {
-    flex: 1,
-    justifyContent: 'center',
+  centralLogoContainer: {
     alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 150,
+    marginBottom: 0,
+  },
+  centralLogoLarge: {
+    width: 240,
+    height: 240,
+    borderRadius: 90,
+    alignSelf: 'center',
+    marginBottom: 24,
   },
   content: {
     flex: 1,
@@ -85,9 +89,12 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontFamily: theme.fonts.body,
   },
-  logo: {
-    width: '100%',
-    height: '100%',
+  bigLogo: {
+    width: 300,
+    height: 300,
+    borderRadius: 90,
+    alignSelf: 'center',
+    marginBottom: 0,
   },
 });
 

@@ -12,8 +12,6 @@ import AnalysisResultScreen from "../screens/AnalysisResultScreen";
 import AnalysisOptionsScreen from "../screens/AnalysisOptionsScreen";
 import HairAIScreen from "../screens/HairAIScreen";
 import RoutineScreen from "../screens/RoutineScreen";
-import RoutineForm from "../screens/RoutineForm";
-import MenuScreen from "../screens/MenuScreen"; // New Menu Screen
 import SplashScreen from "../screens/SplashScreen"; // New Splash Screen
 import AuthScreen from "../screens/AuthScreen";
 import theme from "../styles/theme";
@@ -52,8 +50,8 @@ const MainTabNavigator = () => {
             iconName = focused ? 'list-circle' : 'list-circle-outline';
           } else if (route.name === 'AI Advisor') {
             iconName = focused ? 'chatbubbles' : 'chatbubbles-outline';
-          } else if (route.name === 'Menu') {
-            iconName = focused ? 'menu' : 'menu-outline';
+          } else if (route.name === 'Profile') {
+            iconName = focused ? 'person' : 'person-outline';
           } else if (route.name === 'Analyse') {
             iconName = focused ? 'aperture' : 'aperture-outline';
           }
@@ -95,7 +93,11 @@ const MainTabNavigator = () => {
         }}
       />
       <Tab.Screen name="AI Advisor" component={HairAIScreen} />
-      <Tab.Screen name="Menu" component={MenuScreen} />
+      <Tab.Screen name="Profile" component={ProfileScreen} options={{
+        tabBarIcon: ({ focused, color, size }) => (
+          <Ionicons name={focused ? 'person' : 'person-outline'} size={size} color={color} />
+        ),
+      }} />
     </Tab.Navigator>
   );
 };
@@ -179,13 +181,6 @@ const AppNavigator = () => {
         name="Profile"
         component={ProfileScreen}
         options={{ title: "My Profile" }} // Header will be shown for these
-      />
-      <Stack.Screen
-        name="RoutineForm"
-        component={RoutineForm}
-        options={({ route }) => ({
-          title: route.params?.routine ? "Edit Routine" : "Create Routine",
-        })}
       />
        <Stack.Screen
         name="Upload" // Kept for potential direct access or future use

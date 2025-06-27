@@ -1,251 +1,298 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, Alert, StyleSheet, ScrollView, Image } from 'react-native';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { getRoutines, deleteRoutine } from '../services/SupabaseService';
+import React, { useEffect, useState } from 'react';
+import { View, Text, Button, ActivityIndicator, StyleSheet, ScrollView, Alert, TouchableOpacity, Image } from 'react-native';
+import { getLatestAIRoutine, requestAIRoutine, getRoutineProgress, setRoutineStepChecked } from '../services/SupabaseService';
 import theme from '../styles/theme';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useAuth } from '../contexts/AuthContext';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 
 const RoutineScreen = () => {
-  const navigation = useNavigation();
-  const [routines, setRoutines] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const [routine, setRoutine] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [requesting, setRequesting] = useState(false);
+  const [analysisFailed, setAnalysisFailed] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [progress, setProgress] = useState({});
+  const [progressLoading, setProgressLoading] = useState(false);
 
-  const fetchRoutines = async () => {
-    setLoading(true);
-    const { data, error } = await getRoutines();
-    if (error) {
-      Alert.alert('Error', 'Could not load routines.');
-    } else {
-      setRoutines(data || []);
+  const fetchRoutine = async () => {
+    console.log('Calling fetchRoutine');
+    try {
+      setLoading(true);
+      setErrorMsg('');
+      const { data, error } = await getLatestAIRoutine();
+      if (error) {
+        setErrorMsg('Could not load your personalized routine.');
+        setRoutine(null);
+      } else {
+        setRoutine(data);
+        // Detect failed analysis in the linked analysis (if available)
+        let failed = false;
+        if (data && data.analysis_id && data.routine) {
+          // Check for failure indicators in the analysis summary or steps
+          const routineText = JSON.stringify(data.routine).toLowerCase();
+          const failureIndicators = [
+            'unable to analyze',
+            'technical issues',
+            'cannot provide',
+            'no data',
+            'general advice',
+            'not tailored',
+            'without the ability to analyze',
+            'lack of analytical data',
+            'no specific observations',
+            'no analysis',
+            'not analyzed',
+            'not available',
+            'not enough information',
+            'not enough data',
+            'no images',
+            'images were not analyzed',
+            'analysis failed',
+          ];
+          failed = failureIndicators.some(indicator => routineText.includes(indicator));
+        }
+        setAnalysisFailed(failed);
+      }
+      setLoading(false);
+    } catch (e) {
+      console.error('fetchRoutine error:', e);
+      setErrorMsg('An unexpected error occurred while loading your routine.');
+      setRoutine(null);
+      setLoading(false);
     }
-    setLoading(false);
   };
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchRoutines();
-    }, [])
-  );
-
-  const handleDelete = async (id) => {
-    Alert.alert('Delete Routine', 'Are you sure you want to delete this routine?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          const { error } = await deleteRoutine(id);
-          if (error) {
-            Alert.alert('Error', 'Could not delete routine.');
-          } else {
-            fetchRoutines();
-          }
-        },
-      },
-    ]);
+  const fetchProgress = async (routineId) => {
+    setProgressLoading(true);
+    const prog = await getRoutineProgress(routineId);
+    setProgress(prog);
+    setProgressLoading(false);
   };
 
-  const handleEdit = (routine) => {
-    navigation.navigate('RoutineForm', { routine });
+  useEffect(() => {
+    fetchRoutine();
+    if (routine && routine.id) {
+      fetchProgress(routine.id);
+    }
+  }, [routine && routine.id]);
+
+  const handleRequestRoutine = async () => {
+    setRequesting(true);
+    setErrorMsg('');
+    const { error } = await requestAIRoutine();
+    if (error) {
+      setErrorMsg(error.message || 'Could not generate a new routine.');
+    }
+    await fetchRoutine(); // Always reload from Supabase
+    setRequesting(false);
   };
 
-  const handleCreate = () => {
-    navigation.navigate('RoutineForm');
+  const handleToggleStep = async (stepIndex) => {
+    if (!routine || !routine.id) return;
+    const newChecked = !progress[stepIndex];
+    setProgress({ ...progress, [stepIndex]: newChecked });
+    setProgressLoading(true);
+    await setRoutineStepChecked(routine.id, stepIndex, newChecked);
+    setProgressLoading(false);
   };
-
-  const renderItem = ({ item }) => (
-    <View style={styles.routineItem}>
-      <Text style={styles.routineTitle}>{item.title}</Text>
-      <Text style={styles.routineDescription}>{item.description}</Text>
-      <Text style={styles.routineType}>{item.routine_type}</Text>
-      <View style={styles.buttonGroup}>
-        <TouchableOpacity style={styles.actionButton} onPress={() => handleEdit(item)}>
-          <Text style={styles.actionButtonText}>Edit</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.deleteButton} onPress={() => handleDelete(item.id)}>
-          <Text style={styles.actionButtonText}>Delete</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={theme.colors.accent} />
-      </View>
-    );
-  }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.logoContainer}>
-        <Image source={require('../../assets/splash.png')} style={styles.splashImage} />
-      </View>
-
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>My Routines</Text>
+    <LinearGradient colors={[theme.colors.background, theme.colors.surface]} style={{ flex: 1 }}>
+      <ScrollView contentContainerStyle={styles.container}>
+        <View style={styles.centralLogoContainer}>
+          <Image source={require('../../assets/splash.png')} style={styles.bigLogo} />
         </View>
-        <View style={styles.content}>
-          <TouchableOpacity style={styles.createButton} onPress={handleCreate}>
-            <Text style={styles.createButtonText}>+ Create New Routine</Text>
+        <View style={styles.headerContainer}>
+          <Text style={styles.headerTitle}>Personalized Routine</Text>
+        </View>
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity
+            style={styles.requestButton}
+            onPress={handleRequestRoutine}
+            disabled={requesting}
+          >
+            <Text style={styles.requestButtonText}>{requesting ? 'Requesting...' : 'Request Personalized Routine'}</Text>
           </TouchableOpacity>
-          {routines.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>No routines found. Create your first routine!</Text>
-            </View>
-          ) : (
-            <FlatList
-              data={routines}
-              keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
-              renderItem={renderItem}
-              refreshing={refreshing}
-              onRefresh={fetchRoutines}
-              contentContainerStyle={styles.listContainer}
-            />
-          )}
         </View>
+        {loading || progressLoading ? (
+          <ActivityIndicator size="large" color={theme.colors.accent} style={{ marginTop: 24 }} />
+        ) : errorMsg ? (
+          <View style={styles.errorBox}>
+            <Text style={styles.errorText}>{errorMsg}</Text>
+          </View>
+        ) : analysisFailed ? (
+          <View style={styles.errorBox}>
+            <Text style={styles.errorText}>Could not generate a routine. Please try again after a successful analysis.</Text>
+          </View>
+        ) : (() => {
+          // --- DEBUG LOG ---
+          console.log('Routine object:', routine);
+          // Support both routine.steps and routine.routine.steps
+          const steps = routine?.routine?.steps || routine?.steps;
+          const title = routine?.routine?.title || routine?.title;
+          if (steps && steps.length > 0) {
+            return (
+              <View style={styles.routineBox}>
+                <Text style={styles.routineTitle}>{title || 'Routine'}</Text>
+                {steps.map((step, idx) => (
+                  <TouchableOpacity
+                    key={idx}
+                    style={styles.routineStepRow}
+                    onPress={() => handleToggleStep(idx)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons
+                      name={progress[idx] ? 'checkbox' : 'square-outline'}
+                      size={24}
+                      color={progress[idx] ? theme.colors.accent : theme.colors.text}
+                      style={{ marginRight: 12 }}
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.routineStepTitle, { color: (routine?.colorAnalysis?.colorHex || theme.colors.accent) }]}>{step.title}</Text>
+                      <Text style={styles.routineStepDesc}>{step.description}</Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            );
+          } else {
+            return (
+              <View style={styles.infoBox}>
+                <Text style={styles.infoText}>No routine available. Please request a personalized routine.</Text>
+              </View>
+            );
+          }
+        })()}
       </ScrollView>
-    </View>
+    </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+    backgroundColor: 'transparent',
   },
-  header: {
-    backgroundColor: theme.colors.surface,
-    paddingTop: 60,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-    ...theme.shadows.medium,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.accentGlow,
+  centralLogoContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 15,
+    marginBottom: 0,
+  },
+  bigLogo: {
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    alignSelf: 'center',
+    marginBottom: 0,
+  },
+  headerContainer: {
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: 16,
   },
   headerTitle: {
-    fontSize: theme.fontSizes.xl,
-    color: theme.colors.textPrimary,
-    fontFamily: theme.fonts.title,
+    fontSize: 28,
     fontWeight: 'bold',
+    color: theme.colors.primary,
+    marginBottom: 8,
     textAlign: 'center',
+    fontFamily: theme.fonts.heading,
   },
-  content: {
-    flex: 1,
-    padding: 20,
-  },
-  createButton: {
-    backgroundColor: theme.colors.accent,
-    borderRadius: theme.borderRadius.lg,
-    padding: 16,
+  buttonContainer: {
+    width: '100%',
     alignItems: 'center',
-    marginBottom: 20,
-    ...theme.shadows.medium,
-    borderWidth: 1,
-    borderColor: theme.colors.accentGlow,
+    marginBottom: 24,
   },
-  createButtonText: {
-    color: theme.colors.textPrimary,
-    fontSize: theme.fontSizes.lg,
+  requestButton: {
+    backgroundColor: theme.colors.accent,
+    borderRadius: 24,
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: theme.colors.accent,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  requestButtonText: {
+    color: theme.colors.onAccent,
+    fontSize: 18,
     fontWeight: 'bold',
-    fontFamily: theme.fonts.title,
+    fontFamily: theme.fonts.body,
   },
-  routineItem: {
+  routineBox: {
+    width: '100%',
     backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.lg,
+    borderRadius: 18,
     padding: 20,
-    marginBottom: 16,
-    ...theme.shadows.medium,
-    borderWidth: 1,
-    borderColor: theme.colors.accentGlow,
+    marginTop: 16,
+    marginBottom: 24,
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 1,
   },
   routineTitle: {
-    fontSize: theme.fontSizes.lg,
+    fontSize: 22,
+    fontWeight: 'bold',
     color: theme.colors.primary,
-    fontFamily: theme.fonts.title,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  routineDescription: {
-    fontSize: theme.fontSizes.body,
-    color: theme.colors.textPrimary,
-    fontFamily: theme.fonts.body,
-    marginBottom: 8,
-    lineHeight: 20,
-  },
-  routineType: {
-    fontSize: theme.fontSizes.sm,
-    color: theme.colors.textSecondary,
-    fontFamily: theme.fonts.body,
-    marginBottom: 16,
-    fontStyle: 'italic',
-  },
-  buttonGroup: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-  },
-  actionButton: {
-    backgroundColor: theme.colors.primary,
-    borderRadius: theme.borderRadius.md,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    marginLeft: 8,
-    ...theme.shadows.soft,
-    borderWidth: 1,
-    borderColor: theme.colors.accentGlow,
-  },
-  deleteButton: {
-    backgroundColor: theme.colors.error,
-    borderRadius: theme.borderRadius.md,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    marginLeft: 8,
-    ...theme.shadows.soft,
-    borderWidth: 1,
-    borderColor: theme.colors.accentGlow,
-  },
-  actionButtonText: {
-    color: theme.colors.textPrimary,
-    fontSize: theme.fontSizes.sm,
-    fontWeight: 'bold',
-    fontFamily: theme.fonts.body,
-  },
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 40,
-  },
-  emptyText: {
-    color: theme.colors.textSecondary,
-    fontSize: theme.fontSizes.body,
-    fontFamily: theme.fonts.body,
+    marginBottom: 12,
     textAlign: 'center',
+    fontFamily: theme.fonts.heading,
   },
-  listContainer: {
-    paddingBottom: 32,
+  routineStepRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 14,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0,0,0,0.01)',
   },
-  logoContainer: {
-    position: 'absolute',
-    top: 20,
-    right: 20,
+  routineStepTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: theme.colors.accent,
+    fontFamily: theme.fonts.body,
   },
-  splashImage: {
-    width: 100,
-    height: 100,
+  routineStepDesc: {
+    fontSize: 15,
+    color: '#FFFFFF',
+    fontFamily: theme.fonts.body,
+    marginTop: 2,
   },
-  scrollContent: {
-    flexGrow: 1,
+  errorBox: {
+    backgroundColor: theme.colors.error,
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 24,
+    alignItems: 'center',
+  },
+  errorText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    textAlign: 'center',
+    fontFamily: theme.fonts.body,
+  },
+  infoBox: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 24,
+    alignItems: 'center',
+  },
+  infoText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    textAlign: 'center',
+    fontFamily: theme.fonts.body,
   },
 });
 

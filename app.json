@@ -16,7 +16,10 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.drzou.rootnglow",
-      "buildNumber": "1"
+      "buildNumber": "1",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -32,7 +35,8 @@
     "extra": {
       "eas": {
         "projectId": "c2b26dd7-eccf-4d7a-8e79-4cede568901e"
-      }
+      },
+      "TOGETHER_API_KEY": "tgp_v1_aHRkTd-Bna870IqKOcsHXNp55Tjsg3yYuoPAfok43gk"
     },
     "sdkVersion": "52.0.0",
     "platforms": [

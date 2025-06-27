@@ -160,18 +160,16 @@ const AnalysisOptionsScreen = () => {
   return (
     <View style={styles.container}>
       {/* Logo in top right */}
-      <View style={styles.logoContainer}>
-        <Image source={require('../../assets/splash.png')} style={styles.splashImage} />
+      <View style={styles.centralLogoContainer}>
+        <Image source={require('../../assets/splash.png')} style={styles.bigLogo} />
       </View>
+      
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color={theme.colors.primary} />
-          </TouchableOpacity>
-          <Text style={styles.title}>Hair Analysis Options</Text>
-        </View>
+        <View style={styles.headerContainer}>
+        <Text style={styles.headerTitle}>Hair Analysis Options</Text>
+      </View>
 
         {/* Option 1: General Analysis */}
         <TouchableOpacity 
@@ -303,15 +301,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 30,
-  },
-  backButton: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 20,
-    padding: 8,
-    marginRight: 16,
-    ...theme.shadows.soft,
-    borderWidth: 1,
-    borderColor: theme.colors.accentGlow,
   },
   title: {
     fontSize: theme.fontSizes.xl,
@@ -471,15 +460,31 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontFamily: theme.fonts.body,
   },
-  logoContainer: {
-    position: 'absolute',
-    top: 20,
-    right: 20,
+  centralLogoContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 15,
+    marginBottom: 0,
   },
-  splashImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+  bigLogo: {
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    alignSelf: 'center',
+    marginBottom: 0,
+  },
+  headerContainer: {
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: theme.colors.primary,
+    fontFamily: theme.fonts.heading,
+    textAlign: 'center',
+    letterSpacing: 1.2,
+    marginBottom: 8,
   },
 });
 

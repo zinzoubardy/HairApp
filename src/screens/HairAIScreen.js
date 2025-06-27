@@ -52,12 +52,11 @@ const HairAIScreen = () => {
     >
       <StatusBar barStyle="light-content" backgroundColor={theme.colors.background} />
       
-      {/* Logo in top right */}
-      <View style={styles.logoContainer}>
-        <Image source={require('../../assets/splash.png')} style={styles.splashImage} />
+      <View style={styles.centralLogoContainer}>
+        <Image source={require('../../assets/splash.png')} style={styles.bigLogo} />
       </View>
 
-      <View style={styles.header}>
+      <View style={styles.headerContainer}>
         <Text style={styles.headerTitle}>AI Hair Advisor</Text>
         <Text style={styles.headerSubtitle}>
           Ask our AI for hairstyle advice, color suggestions, or product recommendations!
@@ -101,6 +100,9 @@ const HairAIScreen = () => {
           </View>
         )}
       </View>
+
+      {/* Large faded logo at the bottom, below Get Advice button */}
+      <Image source={require('../../assets/splash.png')} style={styles.bottomFadedLogo} />
     </KeyboardAvoidingView>
   );
 };
@@ -110,39 +112,37 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
-  logoContainer: {
-    position: 'absolute',
-    top: 20,
-    right: 20,
-    zIndex: 10,
+  centralLogoContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 15,
+    marginBottom: 0,
   },
-  splashImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+  bigLogo: {
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    alignSelf: 'center',
+    marginBottom: 0,
   },
-  header: {
-    backgroundColor: theme.colors.surface,
-    paddingTop: 60,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-    ...theme.shadows.medium,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.accentGlow,
+  headerContainer: {
+    alignItems: 'center',
+    marginBottom: 12,
   },
   headerTitle: {
-    fontSize: theme.fontSizes.xl,
-    color: theme.colors.textPrimary,
-    fontFamily: theme.fonts.title,
+    fontSize: 22,
     fontWeight: 'bold',
+    color: theme.colors.primary,
+    fontFamily: theme.fonts.heading,
     textAlign: 'center',
+    letterSpacing: 1.2,
     marginBottom: 8,
   },
   headerSubtitle: {
-    fontSize: theme.fontSizes.md,
-    color: theme.colors.textSecondary,
-    fontFamily: theme.fonts.body,
+    fontSize: 15,
+    color: '#FFFFFF',
     textAlign: 'center',
+    marginBottom: 0,
   },
   content: {
     flex: 1,
@@ -218,6 +218,18 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.body,
     fontSize: theme.fontSizes.md,
     lineHeight: 24,
+  },
+  bottomFadedLogo: {
+    position: 'absolute',
+    bottom: 20,
+    left: 0,
+    right: 0,
+    width: '100%',
+    height: 220,
+    opacity: 0.08,
+    resizeMode: 'contain',
+    zIndex: -1,
+    alignSelf: 'center',
   },
 });
 

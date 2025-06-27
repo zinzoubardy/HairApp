@@ -8,7 +8,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 const AnalysisResultScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const { type, question, answer, imageUrl } = route.params || {};
+  const { type, question, answer, imageUrl, colorAnalysis } = route.params || {};
 
   return (
     <LinearGradient colors={[theme.colors.primary, theme.colors.accent, theme.colors.background]} style={styles.container}>
@@ -47,6 +47,16 @@ const AnalysisResultScreen = () => {
             </View>
             <Text style={styles.answerText}>{answer}</Text>
           </View>
+
+          {/* Color Analysis & Preview */}
+          {colorAnalysis && colorAnalysis.colorHex && (
+            <View style={styles.colorPreviewSection}>
+              <Text style={styles.colorPreviewLabel}>Analyzed Color</Text>
+              <View style={[styles.colorSwatch, { backgroundColor: colorAnalysis.colorHex }]} />
+              <Text style={styles.colorReferenceText}>{colorAnalysis.colorReference || 'Professional color reference'}</Text>
+              <Text style={styles.colorSummaryText}>{colorAnalysis.summary || colorAnalysis.detectedColor}</Text>
+            </View>
+          )}
 
           {/* Action Buttons */}
           <View style={styles.actionButtons}>
@@ -259,6 +269,43 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     color: theme.colors.primary,
+  },
+  colorPreviewSection: {
+    marginTop: 24,
+    alignItems: 'center',
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.lg,
+    padding: 16,
+    ...theme.shadows.soft,
+    borderWidth: 1,
+    borderColor: theme.colors.accentGlow,
+  },
+  colorPreviewLabel: {
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.primary,
+    fontFamily: theme.fonts.title,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  colorSwatch: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    borderWidth: 2,
+    borderColor: theme.colors.accentGlow,
+    marginBottom: 8,
+  },
+  colorReferenceText: {
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.textSecondary,
+    fontFamily: theme.fonts.body,
+    marginBottom: 4,
+  },
+  colorSummaryText: {
+    fontSize: theme.fontSizes.body,
+    color: theme.colors.textPrimary,
+    fontFamily: theme.fonts.body,
+    textAlign: 'center',
   },
 });
 

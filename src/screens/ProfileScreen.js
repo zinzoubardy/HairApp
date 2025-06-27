@@ -228,6 +228,11 @@ const ProfileScreen = ({ navigation }) => {
     const { error } = await signOut();
     if (error) {
       Alert.alert("Sign Out Error", error.message);
+    } else {
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Splash' }],
+      });
     }
     // Navigation to AuthScreen will be handled by onAuthStateChange
   };
@@ -311,7 +316,10 @@ const ProfileScreen = ({ navigation }) => {
     );
   }
 
-  if (isLoading && user) { // Show profile specific loading only when user is confirmed and we are fetching their profile
+  if (isLoading && user) { // Show 
+  // 
+  // 
+  //  specific loading only when user is confirmed and we are fetching their profile
     return (
       <View style={{...styles.container, justifyContent: "center", alignItems: "center", backgroundColor: theme.colors.background}}>
         <ActivityIndicator size="large" color={theme.colors.primary} />
@@ -326,12 +334,16 @@ const ProfileScreen = ({ navigation }) => {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       {/* Logo in top right */}
-      <View style={styles.logoContainer}>
-        <Image source={require('../../assets/splash.png')} style={styles.splashImage} />
-      </View>
+      
+      
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.title}>My Profile</Text>
+      <View style={styles.centralLogoContainer}>
+        <Image source={require('../../assets/splash.png')} style={styles.bigLogo} />
+      </View>
+      <View style={styles.headerContainer}>
+        <Text style={styles.headerTitle}>My Profile</Text>
+      </View>
         <Text style={styles.subtitle}>Manage your hair profile and preferences</Text>
         <Text style={styles.emailText}>Email: {user?.email}</Text>
 
@@ -616,15 +628,31 @@ const styles = StyleSheet.create({
     borderRadius: theme.borderRadius.md,
     resizeMode: 'cover',
   },
-  logoContainer: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
+  bigLogo: {
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    alignSelf: 'center',
+    marginBottom: 0,
   },
-  splashImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  centralLogoContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 0,
+    marginBottom: 0,
+  },
+  headerContainer: {
+    alignItems: 'center',
+    marginBottom: 0,
+  },
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: theme.colors.primary,
+    fontFamily: theme.fonts.heading,
+    textAlign: 'center',
+    letterSpacing: 1.2,
+    marginBottom: 4,
   },
 });
 

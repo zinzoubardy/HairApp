@@ -108,96 +108,35 @@ export const uploadProfileImage = async (userId, fileUri, angle) => {
   }
 
   try {
-    console.log('=== UPLOAD DEBUG START ===');
+    console.log('=== CLOUDINARY UPLOAD START ===');
     console.log('userId:', userId);
     console.log('fileUri:', fileUri);
     console.log('angle:', angle);
-    
-    const fileExtension = fileUri.split('.').pop()?.toLowerCase() || 'jpg';
-    const fileName = `${angle}.${fileExtension}`;
-    const filePath = `${userId}/${fileName}`; // Store in folder named after userId
-    
-    console.log('fileExtension:', fileExtension);
-    console.log('fileName:', fileName);
-    console.log('filePath:', filePath);
 
-    // Use base64 approach for better React Native compatibility
-    console.log('Converting file to base64...');
-    const response = await fetch(fileUri);
-    console.log('Fetch response status:', response.status);
-    console.log('Fetch response ok:', response.ok);
-    
-    if (!response.ok) {
-      console.error('Fetch failed:', response.status, response.statusText);
-      return { data: null, error: { message: `Failed to fetch file: ${response.status} ${response.statusText}` } };
-    }
-    
-    // Convert to base64
-    const blob = await response.blob();
-    const reader = new FileReader();
-    
-    const base64Promise = new Promise((resolve, reject) => {
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = reject;
+    // Prepare form data for Cloudinary
+    const data = new FormData();
+    data.append('file', {
+      uri: fileUri,
+      type: 'image/jpeg',
+      name: `${angle}.jpg`,
     });
-    
-    reader.readAsDataURL(blob);
-    const base64Data = await base64Promise;
-    
-    // Extract the base64 part (remove data:image/jpeg;base64, prefix)
-    const base64String = base64Data.split(',')[1];
-    
-    console.log('Base64 conversion successful');
-    console.log('Base64 length:', base64String.length);
-    
-    if (!base64String) {
-      console.error('Base64 conversion failed!');
-      return { data: null, error: { message: 'Failed to convert image to base64' } };
+    data.append('upload_preset', 'user_hair_images');
+    data.append('folder', `${userId}`); // Optional: organize by user
+
+    // Upload to Cloudinary
+    const res = await fetch('https://api.cloudinary.com/v1_1/db4j4kycn/image/upload', {
+      method: 'POST',
+      body: data,
+    });
+    const result = await res.json();
+    if (!result.secure_url) {
+      console.error('Cloudinary upload failed:', result);
+      return { data: null, error: { message: 'Failed to upload image to Cloudinary.' } };
     }
-
-    // Determine content type
-    let contentType = 'image/jpeg'; // Default
-    if (fileExtension === 'png') {
-      contentType = 'image/png';
-    } else if (fileExtension === 'webp') {
-      contentType = 'image/webp';
-    }
-    
-    console.log('Content type:', contentType);
-    console.log('Upload path:', filePath);
-    console.log('Bucket name: user.hair.images');
-
-    // Upload using base64
-    const { data, error: uploadError } = await supabase.storage
-      .from('user.hair.images')
-      .upload(filePath, decode(base64String), {
-        contentType: contentType,
-        upsert: true,
-      });
-
-    console.log('=== UPLOAD DEBUG END ===');
-
-    if (uploadError) {
-      console.error(`Error uploading ${angle} image:`, uploadError.message);
-      console.error('Upload error details:', uploadError);
-      return { data: null, error: uploadError };
-    }
-
-    // Get public URL
-    const { data: urlData } = supabase.storage
-      .from('user.hair.images')
-      .getPublicUrl(filePath);
-
-    if (!urlData || !urlData.publicUrl) {
-        console.error(`Error getting public URL for ${angle} image.`);
-        return { data: null, error: { message: `Failed to get public URL for ${angle} image after upload.`} };
-    }
-
-    return { data: { publicUrl: urlData.publicUrl }, error: null };
-
+    console.log('Cloudinary upload successful:', result.secure_url);
+    return { data: { publicUrl: result.secure_url }, error: null };
   } catch (e) {
-    console.error(`Exception during ${angle} image upload:`, e);
-    console.error('Exception details:', e);
+    console.error(`Exception during ${angle} image upload to Cloudinary:`, e);
     return { data: null, error: { message: e.message || `An unexpected error occurred during ${angle} image upload.` } };
   }
 };
@@ -334,116 +273,145 @@ export const updateProfile = async (profileData) => { // profileData should cont
   }
 };
 
-// --- Routine Helper Functions ---
+// --- AI Routine Helper Functions ---
 
-// Get all routines for the currently authenticated user
-export const getRoutines = async () => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    return { data: null, error: { message: "User not authenticated." } };
-  }
-
+// Get the latest AI-generated routine for the current user
+export const getLatestAIRoutine = async () => {
   try {
+    console.log('getLatestAIRoutine called');
+    const userResult = await supabase.auth.getUser();
+    console.log('DEBUG getLatestAIRoutine userResult:', userResult);
+    const userId = userResult.data.user?.id;
+    console.log('DEBUG getLatestAIRoutine userId:', userId);
     const { data, error } = await supabase
-      .from("routines")
-      .select("*") // Select all columns for routines
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false }); // Order by creation date
-
-    if (error) {
-      console.error("Error fetching routines:", error.message);
-    }
+      .from('ai_routines')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+    console.log('DEBUG getLatestAIRoutine data:', data, 'error:', error);
     return { data, error };
   } catch (e) {
-    console.error("Exception fetching routines:", e);
-    return { data: null, error: { message: e.message || "An unexpected error occurred."} };
+    console.error('getLatestAIRoutine error:', e);
+    return { data: null, error: e };
   }
 };
 
-// Create a new routine for the authenticated user
-export const createRoutine = async (routineData) => { // routineData: { title, description, routine_type, steps }
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    return { data: null, error: { message: "User not authenticated." } };
-  }
-
-  const newRoutine = {
-    user_id: user.id,
-    ...routineData, // title, description, routine_type, steps
-  };
-
+// Request a new AI routine (calls AI and upserts result)
+export const requestAIRoutine = async () => {
   try {
-    const { data, error } = await supabase
-      .from("routines")
-      .insert(newRoutine)
-      .select("*") // Select all columns of the newly created routine
-      .single(); // Expect a single row back
-
-    if (error) {
-      console.error("Error creating routine:", error.message);
+    // 1. Get latest hair analysis for the user
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { data: null, error: { message: 'User not authenticated.' } };
+    console.log('DEBUG requestAIRoutine userId:', user.id);
+    const { data: analysis, error: analysisError } = await supabase
+      .from('hair_analysis_results')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+    if (analysisError || !analysis) {
+      return { data: null, error: { message: 'No hair analysis found.' } };
     }
-    return { data, error };
+
+    // 2. Call AI to generate routine
+    let aiResult = await callTogetherAIForRoutine(analysis);
+    console.log('AI routine raw result:', aiResult);
+    if (aiResult && aiResult.error) {
+      // Use fallback routine if AI fails
+      aiResult = {
+        title: 'Sample Personalized Routine',
+        steps: [
+          { title: 'Step 1: Gentle Cleansing', description: 'Use a gentle shampoo and conditioner to maintain the health and integrity of your hair.' },
+          { title: 'Step 2: Regular Trimming', description: 'Schedule regular trimming or styling sessions to keep your hair tidy and reduce messiness.' },
+          { title: 'Step 3: Nourish & Protect', description: 'Apply a hair serum or oil to tame texture and add shine. Protect your hair from wind and environmental damage.' },
+        ],
+      };
+    }
+    let routineObj = aiResult;
+    if (!routineObj || !routineObj.steps || routineObj.steps.length === 0) {
+      // Use fallback routine if AI and parsing both fail
+      routineObj = {
+        title: 'Sample Personalized Routine',
+        steps: [
+          { title: 'Step 1: Gentle Cleansing', description: 'Use a gentle shampoo and conditioner to maintain the health and integrity of your hair.' },
+          { title: 'Step 2: Regular Trimming', description: 'Schedule regular trimming or styling sessions to keep your hair tidy and reduce messiness.' },
+          { title: 'Step 3: Nourish & Protect', description: 'Apply a hair serum or oil to tame texture and add shine. Protect your hair from wind and environmental damage.' },
+        ],
+      };
+    }
+
+    // 3. Upsert routine in ai_routines
+    const { data: upserted, error: upsertError } = await supabase
+      .from('ai_routines')
+      .upsert({
+        user_id: user.id,
+        analysis_id: analysis.id,
+        routine: routineObj,
+        created_at: new Date().toISOString(),
+      }, { onConflict: ['user_id'] })
+      .select()
+      .single();
+    console.log('DEBUG requestAIRoutine upserted:', upserted, 'error:', upsertError);
+    if (upsertError) {
+      return { data: null, error: upsertError };
+    }
+    return { data: upserted, error: null };
   } catch (e) {
-    console.error("Exception creating routine:", e);
-    return { data: null, error: { message: e.message || "An unexpected error occurred."} };
+    console.log('Routine generation error:', e);
+    // Use fallback routine if everything fails
+    const fallbackRoutine = {
+      title: 'Sample Personalized Routine',
+      steps: [
+        { title: 'Step 1: Gentle Cleansing', description: 'Use a gentle shampoo and conditioner to maintain the health and integrity of your hair.' },
+        { title: 'Step 2: Regular Trimming', description: 'Schedule regular trimming or styling sessions to keep your hair tidy and reduce messiness.' },
+        { title: 'Step 3: Nourish & Protect', description: 'Apply a hair serum or oil to tame texture and add shine. Protect your hair from wind and environmental damage.' },
+      ],
+    };
+    return { data: { routine: fallbackRoutine }, error: null };
   }
 };
 
-// Update an existing routine
-export const updateRoutine = async (routineId, updates) => { // updates: { title, description, routine_type, steps }
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    // Although RLS would prevent unauthorized updates, checking user upfront is good practice.
-    return { data: null, error: { message: "User not authenticated." } };
-  }
-
+// Helper: Call Together AI to generate a routine from analysis data
+import { callTogetherAIForRoutine } from './AIService';
+const generateRoutineFromAI = async (analysisData) => {
   try {
-    // We don't explicitly check if the routine belongs to the user here,
-    // as RLS policies on the 'routines' table should enforce this.
-    // The .eq('user_id', user.id) in RLS policy is key.
-    const { data, error } = await supabase
-      .from("routines")
-      .update(updates)
-      .eq("id", routineId) // Specify which routine to update
-      .select("*") // Select all columns of the updated routine
-      .single(); // Expect a single row back
-
-    if (error) {
-      console.error("Error updating routine:", error.message);
-    }
-    return { data, error };
+    return await callTogetherAIForRoutine(analysisData);
   } catch (e) {
-    console.error("Exception updating routine:", e);
-    return { data: null, error: { message: e.message || "An unexpected error occurred."} };
+    return null;
   }
 };
 
-// Delete a routine
-export const deleteRoutine = async (routineId) => {
+// --- Routine Progress Functions ---
+
+export const getRoutineProgress = async (routineId) => {
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    return { data: null, error: { message: "User not authenticated." } };
-  }
+  if (!user) return {};
+  const { data, error } = await supabase
+    .from('routine_progress')
+    .select('step_index, checked')
+    .eq('user_id', user.id)
+    .eq('routine_id', routineId);
+  if (error || !data) return {};
+  // Return as { [stepIndex]: checked }
+  return data.reduce((acc, row) => {
+    acc[row.step_index] = row.checked;
+    return acc;
+  }, {});
+};
 
-  try {
-    // RLS policies should ensure users can only delete their own routines.
-    const { data, error } = await supabase // 'data' will be null on successful delete with no select
-      .from("routines")
-      .delete()
-      .eq("id", routineId);
-      // Removed .single() and .select() as delete might not return the record by default
-      // or it might error if select() is used and no row is found (e.g. already deleted)
-
-    if (error) {
-      console.error("Error deleting routine:", error.message);
-    }
-    // For delete, Supabase client often returns { data: null, error: null } on success
-    // or { data: null, error: SomeError } on failure.
-    // If you need to confirm a row was deleted, you might need a select before delete or check count.
-    // For simplicity, we return the direct result.
-    return { data, error };
-  } catch (e) {
-    console.error("Exception deleting routine:", e);
-    return { data: null, error: { message: e.message || "An unexpected error occurred."} };
-  }
+export const setRoutineStepChecked = async (routineId, stepIndex, checked) => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  await supabase
+    .from('routine_progress')
+    .upsert({
+      user_id: user.id,
+      routine_id: routineId,
+      step_index: stepIndex,
+      checked,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: ['user_id', 'routine_id', 'step_index'] });
 };
