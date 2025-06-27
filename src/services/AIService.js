@@ -85,125 +85,165 @@ export const getHairAnalysis = async (profileData, imageReferences) => {
   }
 
   try {
-    console.log("Starting multi-image hair analysis with vision model...");
+    console.log("Starting hair analysis with vision model...");
     
-    // Analyze each image separately using the vision model
-    const imageAnalyses = [];
-    const imageKeys = Object.keys(imageReferences);
-    
-    for (const angle of imageKeys) {
-      const imageUrl = imageReferences[angle];
-      if (!imageUrl) continue;
+    // Try vision model first - this is the only way to actually see the images
+    try {
+      console.log("Attempting vision model analysis...");
       
-      console.log(`Analyzing ${angle} image:`, imageUrl);
+      // Analyze each image separately using the vision model
+      const imageAnalyses = [];
+      const imageKeys = Object.keys(imageReferences);
       
-      const anglePrompt = `
-        You are an expert hair and scalp analyst. Analyze this hair image from the ${angle} angle.
+      for (const angle of imageKeys) {
+        const imageUrl = imageReferences[angle];
+        if (!imageUrl) continue;
         
-        Please provide a detailed visual analysis focusing on:
-        - Hair texture and pattern visible from this angle
-        - Hair density and thickness
-        - Visible damage (split ends, breakage, frizz)
-        - Hair shine and moisture levels
-        - Scalp condition (oiliness, dryness, flakiness, irritation)
-        - Hair color and any variations
-        - Volume and body
-        - Any styling or treatment evidence
-        - Hair length and shape
-        - Any specific concerns visible from this angle
+        console.log(`Analyzing ${angle} image with vision model:`, imageUrl);
         
-        Be specific and evidence-based. Only describe what you can actually see in this image.
-      `;
-      
-      const response = await together.chat.completions.create({
-        messages: [
-          {
-            role: "user",
-            content: [
+        const anglePrompt = `Analyze this hair image from the ${angle} angle. Look at the actual image and describe what you see:
+- Hair texture and pattern
+- Hair density and thickness
+- Visible damage, split ends, or frizz
+- Hair shine and moisture levels
+- Scalp condition
+- Hair color and any variations
+- Volume and body
+- Any styling or treatment evidence
+- Hair length and shape
+- Any specific concerns
+
+Be specific about what you actually see in this image.`;
+        
+        try {
+          const response = await together.chat.completions.create({
+            messages: [
               {
-                type: "text",
-                text: anglePrompt
-              },
-              {
-                type: "image_url",
-                image_url: {
-                  url: imageUrl
-                }
+                role: "user",
+                content: [
+                  {
+                    type: "text",
+                    text: anglePrompt
+                  },
+                  {
+                    type: "image_url",
+                    image_url: {
+                      url: imageUrl
+                    }
+                  }
+                ]
               }
-            ]
+            ],
+            model: "meta-llama/Llama-Vision-Free",
+            max_tokens: 500,
+            temperature: 0.7,
+          });
+          
+          if (response && response.choices && response.choices[0] && response.choices[0].message) {
+            imageAnalyses.push({
+              angle: angle,
+              analysis: response.choices[0].message.content
+            });
+            console.log(`${angle} vision analysis complete:`, response.choices[0].message.content.substring(0, 100) + "...");
+          } else {
+            console.warn(`No valid response for ${angle} image`);
           }
-        ],
-        model: "meta-llama/Llama-Vision-Free",
-        max_tokens: 800,
-        temperature: 0.7,
-      });
-      
-      if (response && response.choices && response.choices[0] && response.choices[0].message) {
-        imageAnalyses.push({
-          angle: angle,
-          analysis: response.choices[0].message.content
-        });
-        console.log(`${angle} analysis complete:`, response.choices[0].message.content.substring(0, 100) + "...");
+        } catch (imageError) {
+          console.error(`Error analyzing ${angle} image with vision model:`, imageError);
+          // Continue with other images even if one fails
+          imageAnalyses.push({
+            angle: angle,
+            analysis: `Unable to analyze ${angle} image due to technical issues.`
+          });
+        }
       }
+      
+      // If we have some successful analyses, proceed with combination
+      if (imageAnalyses.length > 0) {
+        console.log("Vision model analysis successful, combining results...");
+        
+        // Now combine all analyses into a comprehensive report
+        const combinedPrompt = `Based on the individual image analyses below, create a comprehensive hair analysis report:
+
+INDIVIDUAL IMAGE ANALYSES:
+${imageAnalyses.map(analysis => `**${analysis.angle.toUpperCase()} VIEW:**\n${analysis.analysis}`).join('\n\n')}
+
+Create a comprehensive report with:
+
+**1. Global Hair State Score:**
+Based on the combined analyses above, provide a percentage score (0-100%) and justify with specific observations.
+
+**2. Detailed Scalp Analysis:**
+Summarize the scalp condition based on the analyses above.
+
+**3. Detailed Color Analysis:**
+Analyze the hair color characteristics based on the analyses above.
+
+**4. Key Observations & Potential Issues:**
+List specific observations and potential issues based on the analyses above.
+
+**5. Recommendations:**
+Provide 3-5 actionable recommendations based on the analyses above. For each recommendation, suggest a simple keyword for an icon.
+Format: "Recommendation: [advice]. IconHint: [icon-keyword]"`;
+        
+        const finalResponse = await together.chat.completions.create({
+          messages: [{ role: 'user', content: combinedPrompt }],
+          model: 'meta-llama/Llama-3.3-70B-Instruct-Turbo-Free',
+          max_tokens: 1500,
+          temperature: 0.7,
+        });
+
+        if (finalResponse && finalResponse.choices && finalResponse.choices[0] && finalResponse.choices[0].message) {
+          return { success: true, data: finalResponse.choices[0].message.content };
+        }
+      }
+    } catch (visionError) {
+      console.error("Vision model analysis failed:", visionError);
     }
     
-    // Now combine all analyses into a comprehensive report
-    const combinedPrompt = `
-      You are an expert hair and scalp analyst. I have analyzed hair images from multiple angles and need you to create a comprehensive report based on these individual analyses.
-      
-      INDIVIDUAL IMAGE ANALYSES:
-      ${imageAnalyses.map(analysis => `**${analysis.angle.toUpperCase()} VIEW:**\n${analysis.analysis}`).join('\n\n')}
-      
-      Based on these multiple angle analyses, please create a comprehensive hair analysis report structured exactly as follows:
-      
-      **1. Global Hair State Score:**
-      Provide a percentage score (0-100%) representing the overall health and condition based on the combined visual evidence from all angles. Justify with specific observations.
-      
-      **2. Detailed Scalp Analysis:**
-      Summarize the scalp's condition based on evidence from all angles. Look for:
-      - Oiliness or dryness signs
-      - Flakiness or dandruff
-      - Irritation or redness
-      - Scalp texture and health
-      - Any visible scalp conditions
-      
-      **3. Detailed Color Analysis:**
-      Analyze the hair color characteristics based on evidence from all angles. Identify:
-      - Primary hair color (be specific: Dark Brown, Light Brown, Black, Blonde, Red, etc.)
-      - Color variations or highlights
-      - Color treatment evidence
-      - Color health and vibrancy
-      - Any color damage or fading
-      
-      **4. Key Observations & Potential Issues:**
-      List 2-3 specific observations and potential issues based on the combined visual evidence:
-      - Texture observations
-      - Damage assessment
-      - Volume and body analysis
-      - Any visible hair concerns
-      
-      **5. Recommendations:**
-      Provide 3-5 actionable recommendations based on the combined analysis. For each recommendation, suggest a simple keyword for an icon.
-      Format: "Recommendation: [advice]. IconHint: [icon-keyword]"
-      
-      Be comprehensive, specific, and evidence-based in your analysis.
-    `;
+    // If vision model fails completely, use a very direct text approach
+    console.log("Using direct text model analysis...");
     
-    console.log("Combining analyses into comprehensive report...");
+    let prompt = `You are analyzing hair images. The user has provided these image URLs:
+
+`;
     
-    const finalResponse = await together.chat.completions.create({
-      messages: [{ role: 'user', content: combinedPrompt }],
+    if (imageReferences.up) prompt += `Top view: ${imageReferences.up}\n`;
+    if (imageReferences.back) prompt += `Back view: ${imageReferences.back}\n`;
+    if (imageReferences.left) prompt += `Left view: ${imageReferences.left}\n`;
+    if (imageReferences.right) prompt += `Right view: ${imageReferences.right}\n`;
+
+    prompt += `
+You need to analyze these hair images. Since you cannot directly view images, please provide a general analysis structure that the user can fill in based on what they observe in their own images.
+
+**1. Global Hair State Score:**
+[User should examine their images and provide a score based on what they see]
+
+**2. Detailed Scalp Analysis:**
+[User should describe what they observe about their scalp in the images]
+
+**3. Detailed Color Analysis:**
+[User should describe the hair color they see in the images]
+
+**4. Key Observations & Potential Issues:**
+[User should list specific observations from their images]
+
+**5. Recommendations:**
+[User should provide recommendations based on their observations]`;
+
+    const response = await together.chat.completions.create({
+      messages: [{ role: 'user', content: prompt }],
       model: 'meta-llama/Llama-3.3-70B-Instruct-Turbo-Free',
       max_tokens: 1500,
       temperature: 0.7,
     });
 
-    console.log("Received comprehensive hair analysis response:", finalResponse);
+    console.log("Received hair analysis response:", response);
     
-    if (finalResponse && finalResponse.choices && finalResponse.choices[0] && finalResponse.choices[0].message) {
-      return { success: true, data: finalResponse.choices[0].message.content };
+    if (response && response.choices && response.choices[0] && response.choices[0].message) {
+      return { success: true, data: response.choices[0].message.content };
     } else {
-      console.error("Unexpected response structure from Together AI for hair analysis:", finalResponse);
+      console.error("Unexpected response structure from Together AI for hair analysis:", response);
       return { success: false, error: "Failed to parse AI hair analysis response." };
     }
   } catch (error) {
