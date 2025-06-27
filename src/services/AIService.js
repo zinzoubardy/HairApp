@@ -84,94 +84,126 @@ export const getHairAnalysis = async (profileData, imageReferences) => {
     return { success: false, error: "Image references are required for analysis." };
   }
 
-  // Prepare the prompt for image analysis
-  let prompt = `
-    You are an expert hair and scalp analyst with years of experience in visual hair assessment. Your task is to conduct a COMPREHENSIVE visual analysis of the provided hair images. 
-
-    CRITICAL INSTRUCTIONS:
-    - You MUST analyze ONLY what you can visually observe in the images
-    - You MUST NOT use any user-provided profile information, goals, or preferences
-    - You MUST examine every detail: texture, shine, damage, color, scalp condition, volume, etc.
-    - You MUST be specific and detailed in your observations
-    - You MUST provide evidence-based analysis from visual cues
-
-    The user has provided hair images from different angles for analysis:
-  `;
-  
-  if (imageReferences.up) prompt += `- Top/Up View: ${imageReferences.up}\n`;
-  if (imageReferences.right) prompt += `- Right Side View: ${imageReferences.right}\n`;
-  if (imageReferences.left) prompt += `- Left Side View: ${imageReferences.left}\n`;
-  if (imageReferences.back) prompt += `- Back View: ${imageReferences.back}\n`;
-
-  prompt += `
-    CONDUCT A DETAILED VISUAL ANALYSIS:
-    Examine each image carefully for:
-    - Hair texture and pattern (straight, wavy, curly, coily)
-    - Hair density and thickness
-    - Visible damage (split ends, breakage, frizz)
-    - Hair shine and moisture levels
-    - Scalp condition (oiliness, dryness, flakiness, irritation)
-    - Hair color and any variations
-    - Volume and body
-    - Any styling or treatment evidence
-    - Hair length and shape
-    - Any specific concerns visible in the images
-
-    STRUCTURE YOUR RESPONSE EXACTLY AS FOLLOWS:
-
-    **1. Global Hair State Score:**
-    Provide a percentage score (0-100%) representing the overall health and condition based STRICTLY on visual analysis. Justify with specific visual evidence.
-    Example: "Global Hair State Score: 75% - Hair shows good density but appears slightly dry with some frizz visible."
-
-    **2. Detailed Scalp Analysis:**
-    Analyze the scalp's condition based on visual evidence. Look for:
-    - Oiliness or dryness signs
-    - Flakiness or dandruff
-    - Irritation or redness
-    - Scalp texture and health
-    - Any visible scalp conditions
-    Example: "Scalp Analysis: The scalp appears to be normal to slightly oily based on the visible shine and texture. No signs of severe dryness or irritation are visible."
-
-    **3. Detailed Color Analysis:**
-    Analyze the hair color characteristics based ONLY on visual evidence. Identify:
-    - Primary hair color (be specific: Dark Brown, Light Brown, Black, Blonde, Red, etc.)
-    - Color variations or highlights
-    - Color treatment evidence
-    - Color health and vibrancy
-    - Any color damage or fading
-    Example: "Color Analysis: Based on the images, the hair appears to be Dark Brown with natural variations. The color shows good depth and appears to be natural without visible color treatments."
-
-    **4. Key Observations & Potential Issues:**
-    List 2-3 specific observations and potential issues based on visual evidence:
-    - Texture observations
-    - Damage assessment
-    - Volume and body analysis
-    - Any visible hair concerns
-    Example: "Key Observations & Potential Issues:\n- Observation: Hair appears to have some frizz and dryness at the ends.\n- Potential Issue: Visible split ends suggest the need for a trim."
-
-    **5. Recommendations:**
-    Provide 3-5 actionable recommendations based on your visual analysis. For each recommendation, suggest a simple keyword for an icon.
-    Example: "Recommendations:\n- Recommendation: Use a moisturizing shampoo and conditioner to address visible dryness. IconHint: shampoo\n- Recommendation: Consider a weekly deep conditioning treatment to improve hair texture. IconHint: conditioner-mask"
-
-    REMEMBER: Base EVERYTHING on visual evidence from the images. Be specific, detailed, and evidence-based in your analysis.
-  `;
-
   try {
-    console.log("Sending image-based hair analysis prompt to Together AI with images:", imageReferences);
+    console.log("Starting multi-image hair analysis with vision model...");
     
-    const response = await together.chat.completions.create({
-      messages: [{ role: 'user', content: prompt }],
+    // Analyze each image separately using the vision model
+    const imageAnalyses = [];
+    const imageKeys = Object.keys(imageReferences);
+    
+    for (const angle of imageKeys) {
+      const imageUrl = imageReferences[angle];
+      if (!imageUrl) continue;
+      
+      console.log(`Analyzing ${angle} image:`, imageUrl);
+      
+      const anglePrompt = `
+        You are an expert hair and scalp analyst. Analyze this hair image from the ${angle} angle.
+        
+        Please provide a detailed visual analysis focusing on:
+        - Hair texture and pattern visible from this angle
+        - Hair density and thickness
+        - Visible damage (split ends, breakage, frizz)
+        - Hair shine and moisture levels
+        - Scalp condition (oiliness, dryness, flakiness, irritation)
+        - Hair color and any variations
+        - Volume and body
+        - Any styling or treatment evidence
+        - Hair length and shape
+        - Any specific concerns visible from this angle
+        
+        Be specific and evidence-based. Only describe what you can actually see in this image.
+      `;
+      
+      const response = await together.chat.completions.create({
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: anglePrompt
+              },
+              {
+                type: "image_url",
+                image_url: {
+                  url: imageUrl
+                }
+              }
+            ]
+          }
+        ],
+        model: "meta-llama/Llama-Vision-Free",
+        max_tokens: 800,
+        temperature: 0.7,
+      });
+      
+      if (response && response.choices && response.choices[0] && response.choices[0].message) {
+        imageAnalyses.push({
+          angle: angle,
+          analysis: response.choices[0].message.content
+        });
+        console.log(`${angle} analysis complete:`, response.choices[0].message.content.substring(0, 100) + "...");
+      }
+    }
+    
+    // Now combine all analyses into a comprehensive report
+    const combinedPrompt = `
+      You are an expert hair and scalp analyst. I have analyzed hair images from multiple angles and need you to create a comprehensive report based on these individual analyses.
+      
+      INDIVIDUAL IMAGE ANALYSES:
+      ${imageAnalyses.map(analysis => `**${analysis.angle.toUpperCase()} VIEW:**\n${analysis.analysis}`).join('\n\n')}
+      
+      Based on these multiple angle analyses, please create a comprehensive hair analysis report structured exactly as follows:
+      
+      **1. Global Hair State Score:**
+      Provide a percentage score (0-100%) representing the overall health and condition based on the combined visual evidence from all angles. Justify with specific observations.
+      
+      **2. Detailed Scalp Analysis:**
+      Summarize the scalp's condition based on evidence from all angles. Look for:
+      - Oiliness or dryness signs
+      - Flakiness or dandruff
+      - Irritation or redness
+      - Scalp texture and health
+      - Any visible scalp conditions
+      
+      **3. Detailed Color Analysis:**
+      Analyze the hair color characteristics based on evidence from all angles. Identify:
+      - Primary hair color (be specific: Dark Brown, Light Brown, Black, Blonde, Red, etc.)
+      - Color variations or highlights
+      - Color treatment evidence
+      - Color health and vibrancy
+      - Any color damage or fading
+      
+      **4. Key Observations & Potential Issues:**
+      List 2-3 specific observations and potential issues based on the combined visual evidence:
+      - Texture observations
+      - Damage assessment
+      - Volume and body analysis
+      - Any visible hair concerns
+      
+      **5. Recommendations:**
+      Provide 3-5 actionable recommendations based on the combined analysis. For each recommendation, suggest a simple keyword for an icon.
+      Format: "Recommendation: [advice]. IconHint: [icon-keyword]"
+      
+      Be comprehensive, specific, and evidence-based in your analysis.
+    `;
+    
+    console.log("Combining analyses into comprehensive report...");
+    
+    const finalResponse = await together.chat.completions.create({
+      messages: [{ role: 'user', content: combinedPrompt }],
       model: 'meta-llama/Llama-3.3-70B-Instruct-Turbo-Free',
       max_tokens: 1500,
       temperature: 0.7,
     });
 
-    console.log("Received image-based hair analysis response from Together AI:", response);
+    console.log("Received comprehensive hair analysis response:", finalResponse);
     
-    if (response && response.choices && response.choices[0] && response.choices[0].message) {
-      return { success: true, data: response.choices[0].message.content };
+    if (finalResponse && finalResponse.choices && finalResponse.choices[0] && finalResponse.choices[0].message) {
+      return { success: true, data: finalResponse.choices[0].message.content };
     } else {
-      console.error("Unexpected response structure from Together AI for hair analysis:", response);
+      console.error("Unexpected response structure from Together AI for hair analysis:", finalResponse);
       return { success: false, error: "Failed to parse AI hair analysis response." };
     }
   } catch (error) {

@@ -173,13 +173,30 @@ const ProfileScreen = ({ navigation }) => {
                       left: profilePicLeftUrl,
                       right: profilePicRightUrl,
                     };
-                    const { success, data: analysisData } = await getHairAnalysis(null, imageReferences);
+                    
+                    // Debug logging
+                    console.log("=== AI ANALYSIS DEBUG ===");
+                    console.log("User ID:", user.id);
+                    console.log("Image References:", imageReferences);
+                    console.log("Profile Pic URLs:");
+                    console.log("- Up:", profilePicUpUrl);
+                    console.log("- Back:", profilePicBackUrl);
+                    console.log("- Left:", profilePicLeftUrl);
+                    console.log("- Right:", profilePicRightUrl);
+                    console.log("========================");
+                    
+                    const { success, data: analysisData, error } = await getHairAnalysis(null, imageReferences);
+                    
+                    console.log("AI Analysis Result:", { success, error, dataLength: analysisData?.length });
+                    
                     if (success) {
+                      console.log("Analysis successful, saving to database...");
                       // Save analysis result to DB
                       await saveHairAnalysisResult(user.id, analysisData, imageReferences);
                       Alert.alert('Analysis Complete', 'Your hair analysis is ready! Check your dashboard for personalized recommendations.');
                     } else {
-                      Alert.alert('AI Analysis Failed', 'Could not analyze your hair. Please try again later.');
+                      console.error("AI Analysis failed:", error);
+                      Alert.alert('AI Analysis Failed', `Could not analyze your hair: ${error || 'Unknown error'}. Please try again later.`);
                     }
                   } catch (error) {
                     console.error('AI Analysis error:', error);
