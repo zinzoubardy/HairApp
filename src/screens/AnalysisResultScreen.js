@@ -1,14 +1,161 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import theme from '../styles/theme';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useTranslation } from '../i18n';
+import { getHairAnalysisResult } from '../services/SupabaseService';
 
 const AnalysisResultScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const { type, question, answer, imageUrl, colorAnalysis } = route.params || {};
+  const { t } = useTranslation();
+  const { type, question, answer, imageUrl, colorAnalysis, analysisId } = route.params || {};
+  
+  const [analysisData, setAnalysisData] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    // If we have analysisId, fetch the analysis data from database
+    if (analysisId && !answer) {
+      fetchAnalysisData();
+    }
+  }, [analysisId]);
+
+  const fetchAnalysisData = async () => {
+    setLoading(true);
+    try {
+      const { data } = await getHairAnalysisResult(analysisId);
+      if (data) {
+        setAnalysisData(data);
+      }
+    } catch (error) {
+      console.error('Error fetching analysis data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Helper function to parse analysis text (similar to HomeScreen)
+  const parseAnalysisText = (text) => {
+    if (!text) return null;
+
+    try {
+      // Extract hair state score - handle both English and Arabic
+      const hairStatePatterns = [
+        /Global Hair State Score:\s*(\d+)%/i,
+        /الدرجة العالمية لحالة الشعر:\s*(\d+)%/i,
+        /(\d+)%/  // Fallback: any percentage
+      ];
+      
+      let hairState = 75; // Default
+      for (const pattern of hairStatePatterns) {
+        const match = text.match(pattern);
+        if (match && match[1]) {
+          hairState = parseInt(match[1]);
+          break;
+        }
+      }
+
+      // Extract color analysis - handle both English and Arabic
+      const colorPatterns = [
+        /Color Analysis:\s*([^*]+?)(?=\*\*|$)/is,
+        /تحليل مفصل للون:\s*([^*]+?)(?=\*\*|$)/is
+      ];
+      
+      let colorInfo = null;
+      for (const pattern of colorPatterns) {
+        const match = text.match(pattern);
+        if (match && match[1]) {
+          const colorContent = match[1].trim();
+          
+          // Try to extract color information
+          const colorDetectionPatterns = [
+            /(?:اللون المكتشف:\s*([^,\n]+))/i,
+            /(?:رمز اللون السداسي:\s*#([A-Fa-f0-9]{6}))/i,
+            /(?:detected\s+color[:\s]+([^,\n]+))/i,
+            /(?:hex\s+code[:\s]*#([A-Fa-f0-9]{6}))/i
+          ];
+          
+          let detectedColor = null;
+          let colorHex = null;
+          
+          for (const colorPattern of colorDetectionPatterns) {
+            const colorMatch = colorContent.match(colorPattern);
+            if (colorMatch && colorMatch[1]) {
+              if (colorPattern.toString().includes('hex') || colorPattern.toString().includes('رمز')) {
+                colorHex = '#' + colorMatch[1];
+              } else {
+                detectedColor = colorMatch[1].trim();
+              }
+            }
+          }
+          
+          if (detectedColor || colorHex) {
+            colorInfo = {
+              detectedColor: detectedColor || 'Analyzed',
+              colorHex: colorHex || '#FF3737',
+              summary: detectedColor ? `Detected: ${detectedColor}` : 'Color analysis completed'
+            };
+          }
+          break;
+        }
+      }
+
+      return {
+        hairState,
+        colorInfo,
+        fullText: text
+      };
+    } catch (error) {
+      console.error('Error parsing analysis text:', error);
+      return null;
+    }
+  };
+
+  // Get the analysis content to display
+  const getAnalysisContent = () => {
+    if (answer) {
+      // Direct answer from route params
+      return {
+        question: question || t('hair_analysis'),
+        answer: answer,
+        imageUrl: imageUrl,
+        colorAnalysis: colorAnalysis
+      };
+    } else if (analysisData) {
+      // Analysis data from database
+      const parsed = parseAnalysisText(analysisData.analysis_data?.ai_response);
+      return {
+        question: t('comprehensive_hair_analysis'),
+        answer: analysisData.analysis_data?.ai_response || t('analysis_not_available'),
+        imageUrl: analysisData.image_url,
+        colorAnalysis: parsed?.colorInfo,
+        hairState: parsed?.hairState
+      };
+    }
+    return null;
+  };
+
+  const content = getAnalysisContent();
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <Text style={styles.loadingText}>{t('loading_analysis')}</Text>
+      </View>
+    );
+  }
+
+  if (!content) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>{t('analysis_not_found')}</Text>
+      </View>
+    );
+  }
 
   return (
     <LinearGradient colors={[theme.colors.primary, theme.colors.accent, theme.colors.background]} style={styles.container}>
@@ -18,15 +165,15 @@ const AnalysisResultScreen = () => {
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color={theme.colors.primary} />
           </TouchableOpacity>
-          <Text style={styles.title}>Analysis Result</Text>
+          <Text style={styles.title}>{t('analysis_result')}</Text>
         </View>
 
         {/* Result Card */}
         <LinearGradient colors={[theme.colors.card, theme.colors.background]} style={styles.resultCard}>
           {/* Image */}
-          {imageUrl && (
+          {content.imageUrl && (
             <View style={styles.imageContainer}>
-              <Image source={{ uri: imageUrl }} style={styles.resultImage} />
+              <Image source={{ uri: content.imageUrl }} style={styles.resultImage} />
             </View>
           )}
 
@@ -34,27 +181,40 @@ const AnalysisResultScreen = () => {
           <View style={styles.questionSection}>
             <View style={styles.questionHeader}>
               <Ionicons name="help-circle" size={24} color={theme.colors.primary} />
-              <Text style={styles.questionLabel}>Your Question</Text>
+              <Text style={styles.questionLabel}>{t('analysis_type')}</Text>
             </View>
-            <Text style={styles.questionText}>{question}</Text>
+            <Text style={styles.questionText}>{content.question}</Text>
           </View>
+
+          {/* Hair State Score */}
+          {content.hairState && (
+            <View style={styles.hairStateSection}>
+              <View style={styles.hairStateHeader}>
+                <Ionicons name="analytics" size={24} color={theme.colors.accent} />
+                <Text style={styles.hairStateLabel}>{t('hair_health_score')}</Text>
+              </View>
+              <View style={styles.hairStateScore}>
+                <Text style={styles.hairStatePercent}>{content.hairState}%</Text>
+              </View>
+            </View>
+          )}
 
           {/* Answer */}
           <View style={styles.answerSection}>
             <View style={styles.answerHeader}>
               <Ionicons name="bulb" size={24} color={theme.colors.accent} />
-              <Text style={styles.answerLabel}>AI Hair Advisor Response</Text>
+              <Text style={styles.answerLabel}>{t('ai_analysis')}</Text>
             </View>
-            <Text style={styles.answerText}>{answer}</Text>
+            <Text style={styles.answerText}>{content.answer}</Text>
           </View>
 
           {/* Color Analysis & Preview */}
-          {colorAnalysis && colorAnalysis.colorHex && (
+          {content.colorAnalysis && content.colorAnalysis.colorHex && (
             <View style={styles.colorPreviewSection}>
-              <Text style={styles.colorPreviewLabel}>Analyzed Color</Text>
-              <View style={[styles.colorSwatch, { backgroundColor: colorAnalysis.colorHex }]} />
-              <Text style={styles.colorReferenceText}>{colorAnalysis.colorReference || 'Professional color reference'}</Text>
-              <Text style={styles.colorSummaryText}>{colorAnalysis.summary || colorAnalysis.detectedColor}</Text>
+              <Text style={styles.colorPreviewLabel}>{t('analyzed_color')}</Text>
+              <View style={[styles.colorSwatch, { backgroundColor: content.colorAnalysis.colorHex }]} />
+              <Text style={styles.colorReferenceText}>{content.colorAnalysis.detectedColor}</Text>
+              <Text style={styles.colorSummaryText}>{content.colorAnalysis.summary}</Text>
             </View>
           )}
 
@@ -65,15 +225,15 @@ const AnalysisResultScreen = () => {
               onPress={() => navigation.navigate('Analyse')}
             >
               <Ionicons name="refresh" size={20} color={theme.colors.card} />
-              <Text style={styles.actionButtonText}>New Analysis</Text>
+              <Text style={styles.actionButtonText}>{t('new_analysis')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
               style={[styles.actionButton, styles.secondaryButton]}
-              onPress={() => navigation.navigate('Dashboard')}
+              onPress={() => navigation.navigate('MainTabs')}
             >
               <Ionicons name="home" size={20} color={theme.colors.primary} />
-              <Text style={[styles.actionButtonText, styles.secondaryButtonText]}>Go to Dashboard</Text>
+              <Text style={[styles.actionButtonText, styles.secondaryButtonText]}>{t('go_to_dashboard')}</Text>
             </TouchableOpacity>
           </View>
         </LinearGradient>
@@ -306,6 +466,32 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     fontFamily: theme.fonts.body,
     textAlign: 'center',
+  },
+  hairStateSection: {
+    marginBottom: 24,
+  },
+  hairStateHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  hairStateLabel: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: theme.colors.accent,
+    marginLeft: 8,
+  },
+  hairStateScore: {
+    backgroundColor: theme.colors.background,
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+  },
+  hairStatePercent: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: theme.colors.primary,
+    fontFamily: theme.fonts.title,
   },
 });
 

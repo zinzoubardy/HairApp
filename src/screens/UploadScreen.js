@@ -2,8 +2,10 @@ import React, { useState, useEffect } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Image, Platform, Alert, ScrollView } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import theme from "../styles/theme";
+import { useTranslation } from '../i18n';
 
 const UploadScreen = ({ navigation }) => {
+  const { t } = useTranslation();
   const [imageUri, setImageUri] = useState(null);
   const [mediaLibraryPermission, setMediaLibraryPermission] = useState(null);
   const [cameraPermission, setCameraPermission] = useState(null);
@@ -21,13 +23,13 @@ const UploadScreen = ({ navigation }) => {
 
   const pickImageFromGallery = async () => {
     if (mediaLibraryPermission === false) { // Check explicitly for false after initial check
-      Alert.alert("Permission Required", "Media library access was denied. Please grant permission in your device settings to select photos.");
+      Alert.alert(t('permission_required'), t('media_library_denied'));
       return;
     }
     if (mediaLibraryPermission === null) { // Still waiting or not determined
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== 'granted') {
-            Alert.alert("Permission Required", "Media library access is required. Please grant permission to select photos.");
+            Alert.alert(t('permission_required'), t('media_library_required'));
             setMediaLibraryPermission(false);
             return;
         }
@@ -35,30 +37,30 @@ const UploadScreen = ({ navigation }) => {
     }
 
     try {
-      let result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: 'Images',
         allowsEditing: true,
-        aspect: [4, 3],
-        quality: 1,
+        aspect: [1, 1],
+        quality: 0.8,
       });
       if (!result.canceled && result.assets && result.assets.length > 0) {
         setImageUri(result.assets[0].uri);
       }
     } catch (error) {
       console.error("Error picking image from gallery: ", error);
-      Alert.alert("Error", "Could not pick image from gallery.");
+      Alert.alert(t('error'), t('gallery_error'));
     }
   };
 
   const takePhotoWithCamera = async () => {
     if (cameraPermission === false) {
-      Alert.alert("Permission Required", "Camera access was denied. Please grant permission in your device settings to take photos.");
+      Alert.alert(t('permission_required'), t('camera_denied'));
       return;
     }
      if (cameraPermission === null) { // Still waiting or not determined
         const { status } = await ImagePicker.requestCameraPermissionsAsync();
         if (status !== 'granted') {
-            Alert.alert("Permission Required", "Camera access is required. Please grant permission to take photos.");
+            Alert.alert(t('permission_required'), t('camera_required'));
             setCameraPermission(false);
             return;
         }
@@ -76,7 +78,7 @@ const UploadScreen = ({ navigation }) => {
       }
     } catch (error) {
       console.error("Error taking photo with camera: ", error);
-      Alert.alert("Error", "Could not take photo with camera.");
+      Alert.alert(t('error'), t('camera_error'));
     }
   };
 
@@ -89,7 +91,7 @@ const UploadScreen = ({ navigation }) => {
       // Navigate to AnalysisResultScreen, passing the image URI
       navigation.navigate("AnalysisResult", { imageUri: imageUri });
     } else {
-      Alert.alert("No Image", "Please select or take an image first.");
+      Alert.alert(t('error'), t('no_image'));
     }
   };
 
@@ -106,7 +108,7 @@ const UploadScreen = ({ navigation }) => {
   return (
     <ScrollView style={{backgroundColor: theme.colors.background}} contentContainerStyle={styles.container}>
       <Text style={{ ...styles.title, color: theme.colors.textPrimary, fontFamily: theme.fonts.title }}>
-        Upload Your Hair Photo
+        {t('upload_photo')}
       </Text>
 
       {/* Permission denied warnings */}

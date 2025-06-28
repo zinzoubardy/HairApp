@@ -1,15 +1,32 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { NavigationContainer } from '@react-navigation/native';
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ActivityIndicator, View, StyleSheet } from 'react-native';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import AppNavigator from "./navigation/AppNavigator";
 import theme from './styles/theme';
+import { initializeI18n } from './i18n';
 
 function Root() {
   const { user, loadingInitial } = useAuth() || { user: null, loadingInitial: false };
+  const [languageReady, setLanguageReady] = useState(false);
 
-  if (loadingInitial) {
+  useEffect(() => {
+    // Initialize i18n when the app starts
+    const initApp = async () => {
+      try {
+        await initializeI18n();
+        setLanguageReady(true);
+      } catch (error) {
+        console.log('Error initializing i18n in App:', error);
+        setLanguageReady(true); // Continue anyway
+      }
+    };
+    
+    initApp();
+  }, []);
+
+  if (loadingInitial || !languageReady) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={theme.colors.accent} />

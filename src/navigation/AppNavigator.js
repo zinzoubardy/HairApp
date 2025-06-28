@@ -4,6 +4,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { TouchableOpacity, View, StyleSheet, Platform } from "react-native";
 import { useAuth } from "../contexts/AuthContext";
+import i18n from "../i18n";
 
 import HomeScreen from "../screens/HomeScreen"; // Will be the new Dashboard
 import UploadScreen from "../screens/UploadScreen";
@@ -44,15 +45,16 @@ const MainTabNavigator = () => {
       screenOptions={({ route }) => ({
         tabBarIcon: ({ focused, color, size }) => {
           let iconName;
-          if (route.name === 'Dashboard') {
+          // Map route names to icons regardless of translation
+          if (route.name === t('dashboard') || route.name === 'Dashboard') {
             iconName = focused ? 'home' : 'home-outline';
-          } else if (route.name === 'Routines') {
+          } else if (route.name === t('routines') || route.name === 'Routines') {
             iconName = focused ? 'list-circle' : 'list-circle-outline';
-          } else if (route.name === 'AI Advisor') {
+          } else if (route.name === t('ai_advisor') || route.name === 'AI Advisor') {
             iconName = focused ? 'chatbubbles' : 'chatbubbles-outline';
-          } else if (route.name === 'Profile') {
+          } else if (route.name === t('profile') || route.name === 'Profile') {
             iconName = focused ? 'person' : 'person-outline';
-          } else if (route.name === 'Analyse') {
+          } else if (route.name === t('analyse') || route.name === 'Analyse') {
             iconName = focused ? 'aperture' : 'aperture-outline';
           }
           return <Ionicons name={iconName} size={size} color={color} />;
@@ -75,10 +77,10 @@ const MainTabNavigator = () => {
         cardStyle: { backgroundColor: theme.colors.background },
       })}
     >
-      <Tab.Screen name="Dashboard" component={HomeScreen} />
-      <Tab.Screen name="Routines" component={RoutineScreen} />
+      <Tab.Screen name={t('dashboard')} component={HomeScreen} />
+      <Tab.Screen name={t('routines')} component={RoutineScreen} />
       <Tab.Screen 
-        name="Analyse" 
+        name={t('analyse')} 
         component={AnalysisOptionsScreen}
         options={{
           tabBarButton: (props) => (
@@ -92,12 +94,8 @@ const MainTabNavigator = () => {
           ),
         }}
       />
-      <Tab.Screen name="AI Advisor" component={HairAIScreen} />
-      <Tab.Screen name="Profile" component={ProfileScreen} options={{
-        tabBarIcon: ({ focused, color, size }) => (
-          <Ionicons name={focused ? 'person' : 'person-outline'} size={size} color={color} />
-        ),
-      }} />
+      <Tab.Screen name={t('ai_advisor')} component={HairAIScreen} />
+      <Tab.Screen name={t('profile')} component={ProfileScreen} />
     </Tab.Navigator>
   );
 };
@@ -145,6 +143,16 @@ const tabScreenOptions = {
     fontWeight: '600',
   },
   cardStyle: { backgroundColor: theme.colors.background },
+};
+
+// Safe translation function
+const t = (key) => {
+  try {
+    return i18n.t(key) || key;
+  } catch (error) {
+    console.log('Translation error for key:', key, error);
+    return key;
+  }
 };
 
 // The AppNavigator now includes the MainTabNavigator and other screens outside the tabs (like modal forms)

@@ -6,9 +6,11 @@ import theme from '../styles/theme';
 import { useNavigation } from '@react-navigation/native';
 import { uploadProfileImage, supabase, getProfile, saveHairAnalysisResult } from '../services/SupabaseService';
 import { getAIHairstyleAdvice, getHairAnalysis, getGeneralHairAnalysis } from '../services/AIService';
+import { useTranslation } from '../i18n';
 
 const AnalysisOptionsScreen = () => {
   const navigation = useNavigation();
+  const { t } = useTranslation();
   const [selectedOption, setSelectedOption] = useState(null);
   const [loading, setLoading] = useState(false);
   const [question, setQuestion] = useState('');
@@ -22,7 +24,7 @@ const AnalysisOptionsScreen = () => {
 
   const pickImage = async (angle = null) => {
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: 'Images',
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
@@ -42,11 +44,11 @@ const AnalysisOptionsScreen = () => {
 
   const handleGeneralAnalysis = async () => {
     if (!selectedImage) {
-      Alert.alert('Error', 'Please select an image first');
+      Alert.alert(t('error'), t('please_select_image'));
       return;
     }
     if (!question.trim()) {
-      Alert.alert('Error', 'Please enter your hair-related question');
+      Alert.alert(t('error'), t('please_enter_question'));
       return;
     }
 
@@ -55,7 +57,7 @@ const AnalysisOptionsScreen = () => {
       // Upload image and get AI advice
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        Alert.alert('Error', 'Please log in to continue');
+        Alert.alert(t('error'), t('please_login'));
         return;
       }
 
@@ -67,7 +69,7 @@ const AnalysisOptionsScreen = () => {
       );
 
       if (uploadError) {
-        Alert.alert('Upload Error', uploadError.message);
+        Alert.alert(t('upload_error'), uploadError.message);
         return;
       }
 
@@ -82,11 +84,11 @@ const AnalysisOptionsScreen = () => {
           imageUrl: uploadData.publicUrl
         });
       } else {
-        Alert.alert('AI Analysis Error', error || 'Failed to get AI response');
+        Alert.alert(t('ai_analysis_error'), error || t('failed_to_get_ai_response'));
       }
     } catch (error) {
       console.error('General analysis error:', error);
-      Alert.alert('Error', 'Failed to complete analysis');
+      Alert.alert(t('error'), t('failed_to_complete_analysis'));
     } finally {
       setLoading(false);
     }
@@ -95,7 +97,7 @@ const AnalysisOptionsScreen = () => {
   const handleDashboardUpdate = async () => {
     const { up, back, left, right } = uploadedImages;
     if (!up || !back || !left || !right) {
-      Alert.alert('Error', 'Please upload all 4 images (Top, Back, Left, Right)');
+      Alert.alert(t('error'), t('please_upload_all_images'));
       return;
     }
 
@@ -103,7 +105,7 @@ const AnalysisOptionsScreen = () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        Alert.alert('Error', 'Please log in to continue');
+        Alert.alert(t('error'), t('please_login'));
         return;
       }
 
@@ -119,14 +121,16 @@ const AnalysisOptionsScreen = () => {
       const uploadErrors = uploadResults.filter(result => result.error);
 
       if (uploadErrors.length > 0) {
-        Alert.alert('Upload Error', 'Some images failed to upload');
+        console.error('Upload errors:', uploadErrors);
+        const errorMessage = uploadErrors[0]?.error?.message || t('some_images_failed');
+        Alert.alert(t('upload_error'), errorMessage);
         return;
       }
 
       // Get profile data for analysis
       const { data: profileData } = await getProfile();
       if (!profileData) {
-        Alert.alert('Error', 'Profile data not found');
+        Alert.alert(t('error'), t('profile_data_not_found'));
         return;
       }
 
@@ -142,16 +146,22 @@ const AnalysisOptionsScreen = () => {
       const { success, data: analysisData } = await getHairAnalysis(null, imageReferences);
       if (success) {
         // Save analysis result to DB
-        await saveHairAnalysisResult(user.id, analysisData, imageReferences);
-        Alert.alert('Analysis Complete', 'Your hair analysis is ready! Check your dashboard for personalized recommendations.');
-        // Navigate directly to dashboard
-        navigation.navigate('Dashboard');
+        const { data: savedAnalysis, error: saveError } = await saveHairAnalysisResult(user.id, analysisData, imageReferences);
+        if (saveError) {
+          Alert.alert(t('error'), t('failed_to_save_analysis'));
+          return;
+        }
+        
+        // Navigate to AnalysisResult screen with the saved analysis ID
+        navigation.navigate('AnalysisResult', {
+          analysisId: savedAnalysis.id
+        });
       } else {
-        Alert.alert('AI Analysis Failed', 'Could not analyze your hair. Please try again later.');
+        Alert.alert(t('ai_analysis_failed'), t('could_not_analyze_hair'));
       }
     } catch (error) {
       console.error('Dashboard update error:', error);
-      Alert.alert('Error', 'Failed to update dashboard');
+      Alert.alert(t('error'), t('failed_to_update_dashboard'));
     } finally {
       setLoading(false);
     }
@@ -168,7 +178,7 @@ const AnalysisOptionsScreen = () => {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Header */}
         <View style={styles.headerContainer}>
-        <Text style={styles.headerTitle}>Hair Analysis Options</Text>
+        <Text style={styles.headerTitle}>{t('hair_analysis_options')}</Text>
       </View>
 
         {/* Option 1: General Analysis */}
@@ -180,9 +190,9 @@ const AnalysisOptionsScreen = () => {
             <View style={styles.optionIcon}>
               <MaterialCommunityIcons name="chat-question" size={48} color={theme.colors.primary} />
             </View>
-            <Text style={styles.optionTitle}>General Hair Analysis</Text>
+            <Text style={styles.optionTitle}>{t('general_hair_analysis')}</Text>
             <Text style={styles.optionDescription}>
-              Upload 1 image and ask any hair-related question
+              {t('general_analysis_description')}
             </Text>
           </View>
         </TouchableOpacity>
@@ -196,7 +206,7 @@ const AnalysisOptionsScreen = () => {
               ) : (
                 <View style={styles.uploadPlaceholder}>
                   <Ionicons name="camera" size={32} color={theme.colors.primary} />
-                  <Text style={styles.uploadText}>Tap to select image</Text>
+                  <Text style={styles.uploadText}>{t('tap_to_select_image')}</Text>
                 </View>
               )}
             </TouchableOpacity>
@@ -204,81 +214,82 @@ const AnalysisOptionsScreen = () => {
             {/* Question Input */}
             <TextInput
               style={styles.questionInput}
-              placeholder="Ask about your hair..."
+              placeholder={t('enter_hair_question')}
               placeholderTextColor={theme.colors.textSecondary}
               value={question}
               onChangeText={setQuestion}
               multiline
-              numberOfLines={4}
+              numberOfLines={3}
             />
 
-            <TouchableOpacity 
-              style={[styles.actionButton, (!selectedImage || !question.trim()) && styles.disabledButton]}
+            {/* Analyze Button */}
+            <TouchableOpacity
+              style={[styles.analyzeButton, loading && styles.disabledButton]}
               onPress={handleGeneralAnalysis}
-              disabled={!selectedImage || !question.trim() || loading}
+              disabled={loading}
             >
               {loading ? (
                 <ActivityIndicator size="small" color={theme.colors.textPrimary} />
               ) : (
-                <Text style={styles.actionButtonText}>Get Analysis</Text>
+                <Text style={styles.analyzeButtonText}>{t('analyse')}</Text>
               )}
             </TouchableOpacity>
           </View>
         )}
 
-        {/* Option 2: Full Scan */}
+        {/* Option 2: Dashboard Update */}
         <TouchableOpacity 
-          style={[styles.optionCard, selectedOption === 'full' && styles.selectedCard]}
-          onPress={() => setSelectedOption('full')}
+          style={[styles.optionCard, selectedOption === 'dashboard' && styles.selectedCard]}
+          onPress={() => setSelectedOption('dashboard')}
         >
           <View style={styles.optionContent}>
             <View style={styles.optionIcon}>
-              <MaterialCommunityIcons name="scan-helper" size={48} color={theme.colors.primary} />
+              <MaterialCommunityIcons name="view-dashboard" size={48} color={theme.colors.primary} />
             </View>
-            <Text style={styles.optionTitle}>Full Hair Scan</Text>
+            <Text style={styles.optionTitle}>{t('dashboard_update')}</Text>
             <Text style={styles.optionDescription}>
-              Upload 4 images for comprehensive analysis
+              {t('dashboard_update_description')}
             </Text>
           </View>
         </TouchableOpacity>
 
-        {selectedOption === 'full' && (
+        {selectedOption === 'dashboard' && (
           <View style={styles.optionContent}>
-            <Text style={styles.sectionTitle}>Upload Images from All Angles</Text>
-            
+            {/* Image Upload Grid */}
             <View style={styles.imageGrid}>
               {[
-                { key: 'up', label: 'Top View', icon: 'arrow-up' },
-                { key: 'back', label: 'Back View', icon: 'arrow-down' },
-                { key: 'left', label: 'Left Side', icon: 'arrow-back' },
-                { key: 'right', label: 'Right Side', icon: 'arrow-forward' },
+                { key: 'up', label: 'Top', icon: 'arrow-up-bold-circle' },
+                { key: 'back', label: 'Back', icon: 'arrow-down-bold-circle' },
+                { key: 'left', label: 'Left', icon: 'arrow-left-bold-circle' },
+                { key: 'right', label: 'Right', icon: 'arrow-right-bold-circle' },
               ].map(({ key, label, icon }) => (
-                <TouchableOpacity 
-                  key={key} 
-                  style={styles.gridImageUpload} 
+                <TouchableOpacity
+                  key={key}
+                  style={styles.imageUploadItem}
                   onPress={() => pickImage(key)}
                 >
                   {uploadedImages[key] ? (
-                    <Image source={{ uri: uploadedImages[key] }} style={styles.gridImage} />
+                    <Image source={{ uri: uploadedImages[key] }} style={styles.uploadedImage} />
                   ) : (
-                    <View style={styles.gridPlaceholder}>
-                      <Ionicons name={icon} size={24} color={theme.colors.primary} />
-                      <Text style={styles.gridLabel}>{label}</Text>
+                    <View style={styles.uploadPlaceholder}>
+                      <MaterialCommunityIcons name={icon} size={24} color={theme.colors.primary} />
+                      <Text style={styles.uploadText}>{label}</Text>
                     </View>
                   )}
                 </TouchableOpacity>
               ))}
             </View>
 
-            <TouchableOpacity 
-              style={[styles.actionButton, Object.values(uploadedImages).some(img => !img) && styles.disabledButton]}
+            {/* Update Dashboard Button */}
+            <TouchableOpacity
+              style={[styles.analyzeButton, loading && styles.disabledButton]}
               onPress={handleDashboardUpdate}
-              disabled={Object.values(uploadedImages).some(img => !img) || loading}
+              disabled={loading}
             >
               {loading ? (
                 <ActivityIndicator size="small" color={theme.colors.textPrimary} />
               ) : (
-                <Text style={styles.actionButtonText}>Update Dashboard</Text>
+                <Text style={styles.analyzeButtonText}>{t('analyse')}</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -410,7 +421,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 20,
   },
-  gridImageUpload: {
+  imageUploadItem: {
     width: '48%',
     aspectRatio: 1,
     marginBottom: 12,
@@ -418,29 +429,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...theme.shadows.soft,
   },
-  gridImage: {
-    width: '100%',
-    height: '100%',
-  },
-  gridPlaceholder: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: theme.colors.background,
-    borderRadius: theme.borderRadius.md,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: theme.colors.primary,
-    borderStyle: 'dashed',
-  },
-  gridLabel: {
-    fontSize: theme.fontSizes.sm,
-    color: theme.colors.textPrimary,
-    fontFamily: theme.fonts.body,
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  actionButton: {
+  analyzeButton: {
     backgroundColor: theme.colors.primary,
     borderRadius: theme.borderRadius.lg,
     paddingVertical: 16,
@@ -454,7 +443,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.border,
     opacity: 0.6,
   },
-  actionButtonText: {
+  analyzeButtonText: {
     color: theme.colors.textPrimary,
     fontSize: theme.fontSizes.md,
     fontWeight: 'bold',

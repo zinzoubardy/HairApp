@@ -1,12 +1,26 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Modal, FlatList, Dimensions, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Modal, FlatList, Dimensions, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import theme from '../styles/theme';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { getProfile, getHairAnalysisResult, getTrendingRecipes } from '../services/SupabaseService';
-import { getHairAnalysis, saveHairAnalysisResult } from '../services/AIService';
+import { getProfile, getHairAnalysisResult, saveHairAnalysisResult, getTrendingRecipes } from '../services/SupabaseService';
+import { getHairAnalysis } from '../services/AIService';
+import i18n from '../i18n';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useTranslation } from '../i18n';
+import { I18nManager } from 'react-native';
 
 const { width } = Dimensions.get('window');
+
+// Safe translation function
+const t = (key) => {
+  try {
+    return i18n.t(key) || key;
+  } catch (error) {
+    console.log('Translation error for key:', key, error);
+    return key;
+  }
+};
 
 // DashboardCard Component
 const DashboardCard = ({ icon, title, status, onPress, children }) => {
@@ -38,19 +52,19 @@ const DashboardCard = ({ icon, title, status, onPress, children }) => {
 // Default data when no analysis is available
 const defaultHairState = 0;
 const defaultScalpAnalysis = {
-  status: 'Not Analyzed',
+  status: t('not_analyzed'),
   icon: 'help-circle',
-  summary: 'Upload images to get analysis',
+  summary: t('upload_images_for_analysis'),
 };
 const defaultColorAnalysis = {
-  status: 'Not Analyzed',
+  status: t('not_analyzed'),
   icon: 'help-circle',
-  summary: 'Upload images to get analysis',
+  summary: t('upload_images_for_analysis'),
 };
 const defaultRecommendations = [
   { icon: 'camera', text: 'Upload hair images from all angles' },
-  { icon: 'analytics', text: 'Get AI-powered hair analysis' },
-  { icon: 'bulb', text: 'Receive personalized recommendations' },
+  { icon: 'chart-line', text: 'Get AI-powered hair analysis' },
+  { icon: 'lightbulb', text: 'Receive personalized recommendations' },
 ];
 
 const HomeScreen = () => {
@@ -172,6 +186,14 @@ const HomeScreen = () => {
     setAnalysing(false);
   };
 
+  // Helper function to get text direction based on content
+  const getTextDirection = (text) => {
+    if (!text) return 'ltr';
+    // Check if text contains Arabic characters
+    const arabicRegex = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/;
+    return arabicRegex.test(text) ? 'rtl' : 'ltr';
+  };
+
   // Helper function to get analysis data with fallbacks
   const getAnalysisData = () => {
     if (!analysis) {
@@ -227,13 +249,29 @@ const HomeScreen = () => {
         'lack of analytical data',
         'no specific observations',
         'no analysis',
-        'not analyzed',
+        t('not_analyzed'),
         'not available',
         'not enough information',
         'not enough data',
         'no images',
-        'images were not analyzed',
+        t('images_not_analyzed'),
         'analysis failed',
+        // Arabic failure indicators
+        'لا يمكن تحليل',
+        'مشاكل تقنية',
+        'لا يمكن تقديم',
+        'لا توجد بيانات',
+        'نصائح عامة',
+        'غير مخصص',
+        'بدون القدرة على التحليل',
+        'نقص في البيانات التحليلية',
+        'لا توجد ملاحظات محددة',
+        'لا يوجد تحليل',
+        'غير متاح',
+        'لا توجد معلومات كافية',
+        'لا توجد بيانات كافية',
+        'لا توجد صور',
+        'فشل التحليل'
       ];
       const analysisFailed = failureIndicators.some(indicator => lowerText.includes(indicator));
 
@@ -257,180 +295,195 @@ const HomeScreen = () => {
       };
 
       try {
-        // Split the text into sections
-        const sections = text.split(/\*\*\d+\.\s+/);
-        console.log('Sections found:', sections);
+        // Extract hair state score - handle both English and Arabic
+        const hairStatePatterns = [
+          /Global Hair State Score:\s*(\d+)%/i,
+          /الدرجة العالمية لحالة الشعر:\s*(\d+)%/i,
+          /(\d+)%/  // Fallback: any percentage
+        ];
+        
+        for (const pattern of hairStatePatterns) {
+          const match = text.match(pattern);
+          if (match && match[1]) {
+            result.hairState = parseInt(match[1]);
+            console.log('Found hair state:', result.hairState);
+            break;
+          }
+        }
 
-        sections.forEach((section, index) => {
-          const trimmedSection = section.trim();
-          console.log(`Section ${index}:`, trimmedSection);
-
-          // Extract hair state score
-          if (trimmedSection.includes('Global Hair State Score:')) {
-            const hairStateMatch = trimmedSection.match(/(\d+)%/);
-            if (hairStateMatch) {
-              result.hairState = parseInt(hairStateMatch[1]);
-              console.log('Found hair state:', result.hairState);
+        // Extract scalp analysis - handle both English and Arabic
+        const scalpPatterns = [
+          /Detailed Scalp Analysis:\s*([^*]+?)(?=\*\*|$)/is,
+          /تحليل مفصل لفروة الرأس:\s*([^*]+?)(?=\*\*|$)/is
+        ];
+        
+        for (const pattern of scalpPatterns) {
+          const match = text.match(pattern);
+          if (match && match[1]) {
+            const scalpContent = match[1].trim();
+            const sentences = scalpContent.split(/[.!?؟]+/).filter(s => s.trim().length > 10);
+            if (sentences.length > 0) {
+              result.scalpAnalysis.summary = sentences[0].trim() + (sentences[0].endsWith('.') ? '' : '.');
+              console.log('Found scalp analysis:', result.scalpAnalysis.summary);
+              break;
             }
           }
+        }
 
-          // Extract scalp analysis
-          if (trimmedSection.includes('Detailed Scalp Analysis:')) {
-            const scalpContent = trimmedSection.replace('Detailed Scalp Analysis:', '').trim();
-            if (scalpContent) {
-              const sentences = scalpContent.split(/[.!?]+/).filter(s => s.trim().length > 10);
-              if (sentences.length > 0) {
-                result.scalpAnalysis.summary = sentences[0].trim() + '.';
-                console.log('Found scalp analysis:', result.scalpAnalysis.summary);
+        // Extract color analysis - handle both English and Arabic
+        const colorPatterns = [
+          /[*'"\s]*Color Analysis:([\s\S]*?)(?=[*'"\s]+(?:Recommendations:|\*+|$))/i,
+          /[*'"\s]*تحليل مفصل للون:([\s\S]*?)(?=[*'"\s]+(?:التوصيات:|\*+|$))/i
+        ];
+        
+        console.log('Trying to extract color analysis...');
+        for (const pattern of colorPatterns) {
+          const match = text.match(pattern);
+          console.log('Color pattern match:', match);
+          if (match && match[1]) {
+            const colorContent = match[1].trim();
+            console.log('Color content found:', colorContent);
+            
+            // Try to extract the actual detected color from AI with multiple patterns
+            const colorDetectionPatterns = [
+              // English patterns
+              /(?:hair\s+color\s+is\s+['"]?([^'"]+)['"]?)/i,
+              /(?:detected\s+color[:\s]+([^,\n]+))/i,
+              /(?:appears\s+to\s+be\s+([^,\n]+))/i,
+              /(?:hair\s+appears\s+to\s+be\s+([^,\n]+))/i,
+              /(?:based\s+on\s+.*?,\s+the\s+hair\s+appears\s+to\s+be\s+([^,\n]+))/i,
+              /(?:identified\s+as\s+([^,\n]+))/i,
+              /(?:color\s+is\s+([^,\n]+))/i,
+              /(?:hair\s+appears\s+to\s+be\s+a\s+([^,\n]+))/i,
+              /(?:appears\s+to\s+be\s+a\s+([^,\n]+))/i,
+              /(?:the\s+hair\s+appears\s+to\s+be\s+a\s+([^,\n]+))/i,
+              // Arabic patterns
+              /(?:اللون المكتشف:\s*([^,\n]+))/i,
+              /(?:يبدو أن لون الشعر\s+([^,\n]+))/i,
+              /(?:لون الشعر\s+([^,\n]+))/i,
+              /(?:اللون\s+([^,\n]+))/i,
+              /(?:يبدو أن الشعر\s+([^,\n]+))/i
+            ];
+            
+            let detectedColor = null;
+            let colorHex = null;
+            
+            // First try to extract hex code
+            const hexMatch = colorContent.match(/رمز اللون السداسي:\s*#([A-Fa-f0-9]{6})/i);
+            if (hexMatch) {
+              colorHex = '#' + hexMatch[1];
+              console.log('Found hex color:', colorHex);
+            }
+            
+            // Then try to extract detected color
+            for (const colorPattern of colorDetectionPatterns) {
+              const colorMatch = colorContent.match(colorPattern);
+              if (colorMatch && colorMatch[1]) {
+                detectedColor = colorMatch[1].trim();
+                console.log('Found detected color:', detectedColor);
+                break;
               }
             }
-          }
-
-          // Extract color analysis
-          if (trimmedSection.includes('Color Analysis:')) {
-            const colorContent = trimmedSection.replace('Color Analysis:', '').trim();
-            if (colorContent) {
-              // Try to extract the actual detected color from AI with multiple patterns
-              const colorPatterns = [
-                /(?:hair\s+color\s+is\s+['"]?([^'"]+)['"]?)/i,
-                /(?:detected\s+color[:\s]+([^,\n]+))/i,
-                /(?:appears\s+to\s+be\s+([^,\n]+))/i,
-                /(?:hair\s+appears\s+to\s+be\s+([^,\n]+))/i,
-                /(?:based\s+on\s+.*?,\s+the\s+hair\s+appears\s+to\s+be\s+([^,\n]+))/i,
-                /(?:identified\s+as\s+([^,\n]+))/i,
-                /(?:color\s+is\s+([^,\n]+))/i,
-                /(?:hair\s+appears\s+to\s+be\s+a\s+([^,\n]+))/i,
-                /(?:appears\s+to\s+be\s+a\s+([^,\n]+))/i,
-                /(?:the\s+hair\s+appears\s+to\s+be\s+a\s+([^,\n]+))/i
+            
+            // If no pattern matched, try to extract color from the first sentence
+            if (!detectedColor) {
+              const firstSentence = colorContent.split(/[.!?؟]/)[0];
+              // Look for common color words in the first sentence (English and Arabic)
+              const colorWords = [
+                'brown', 'black', 'blonde', 'red', 'auburn', 'gray', 'white', 'brunette',
+                'بني', 'أسود', 'أشقر', 'أحمر', 'رمادي', 'أبيض', 'كستنائي'
               ];
-              
-              let detectedColor = null;
-              for (const pattern of colorPatterns) {
-                const match = colorContent.match(pattern);
-                if (match && match[1]) {
-                  detectedColor = match[1].trim();
+              for (const colorWord of colorWords) {
+                if (firstSentence.toLowerCase().includes(colorWord)) {
+                  detectedColor = colorWord;
                   break;
                 }
               }
-              
-              // If no pattern matched, try to extract color from the first sentence
-              if (!detectedColor) {
-                const firstSentence = colorContent.split(/[.!?]/)[0];
-                // Look for common color words in the first sentence
-                const colorWords = ['brown', 'black', 'blonde', 'red', 'auburn', 'gray', 'white', 'brunette'];
-                for (const colorWord of colorWords) {
-                  if (firstSentence.toLowerCase().includes(colorWord)) {
-                    detectedColor = colorWord;
-                    break;
-                  }
-                }
-              }
-              
-              // Map detected colors to reference colors
-              const colorReference = {
-                'dark brown': { name: 'Dark Brown', hex: '#5D4037', reference: 'Similar to L\'Oréal Excellence Creme #3' },
-                'rich dark brown': { name: 'Dark Brown', hex: '#5D4037', reference: 'Similar to L\'Oréal Excellence Creme #3' },
-                'brown': { name: 'Brown', hex: '#8D6E63', reference: 'Similar to Garnier Nutrisse #4' },
-                'light brown': { name: 'Light Brown', hex: '#A1887F', reference: 'Similar to Revlon Colorsilk #5' },
-                'black': { name: 'Black', hex: '#212121', reference: 'Similar to Clairol Natural Instincts #1' },
-                'blonde': { name: 'Blonde', hex: '#F4E4BC', reference: 'Similar to L\'Oréal Feria #9' },
-                'light blonde': { name: 'Light Blonde', hex: '#F5F5DC', reference: 'Similar to Garnier Nutrisse #9' },
-                'dark blonde': { name: 'Dark Blonde', hex: '#D2B48C', reference: 'Similar to Revlon Colorsilk #7' },
-                'red': { name: 'Red', hex: '#D32F2F', reference: 'Similar to Garnier Olia #6.4' },
-                'auburn': { name: 'Auburn', hex: '#8D4E85', reference: 'Similar to Revlon Colorsilk #4R' },
-                'gray': { name: 'Gray', hex: '#9E9E9E', reference: 'Similar to Clairol Natural Instincts #5' },
-                'white': { name: 'White', hex: '#FAFAFA', reference: 'Similar to L\'Oréal Excellence Creme #10' },
-                'brunette': { name: 'Brunette', hex: '#8D6E63', reference: 'Similar to Garnier Nutrisse #4' },
-                'strawberry blonde': { name: 'Strawberry Blonde', hex: '#E8B4B8', reference: 'Similar to L\'Oréal Feria #7.4' }
-              };
-              
-              let referenceColor = null;
-              if (detectedColor && colorReference[detectedColor.toLowerCase()]) {
-                referenceColor = colorReference[detectedColor.toLowerCase()];
-              } else if (detectedColor) {
-                referenceColor = { name: detectedColor };
-              }
-              
-              result.colorAnalysis = {
-                icon: 'palette',
-                status: 'Analyzed',
-                summary: `Detected Color: ${referenceColor.name}`,
-                detectedColor: referenceColor.name,
-                colorHex: referenceColor.hex,
-                colorReference: referenceColor.reference
-              };
-              console.log('Found color analysis:', result.colorAnalysis);
             }
+            
+            // Map detected colors to reference colors (including Arabic colors)
+            const colorReference = {
+              // English colors
+              'dark brown': { name: 'Dark Brown', hex: '#5D4037', reference: 'Similar to L\'Oréal Excellence Creme #3' },
+              'rich dark brown': { name: 'Dark Brown', hex: '#5D4037', reference: 'Similar to L\'Oréal Excellence Creme #3' },
+              'brown': { name: 'Brown', hex: '#8D6E63', reference: 'Similar to Garnier Nutrisse #4' },
+              'light brown': { name: 'Light Brown', hex: '#A1887F', reference: 'Similar to Revlon Colorsilk #5' },
+              'black': { name: 'Black', hex: '#212121', reference: 'Similar to Clairol Natural Instincts #1' },
+              'blonde': { name: 'Blonde', hex: '#F4E4BC', reference: 'Similar to L\'Oréal Feria #9' },
+              'light blonde': { name: 'Light Blonde', hex: '#F5F5DC', reference: 'Similar to Garnier Nutrisse #9' },
+              'dark blonde': { name: 'Dark Blonde', hex: '#D2B48C', reference: 'Similar to Revlon Colorsilk #7' },
+              'red': { name: 'Red', hex: '#D32F2F', reference: 'Similar to Garnier Olia #6.4' },
+              'auburn': { name: 'Auburn', hex: '#8D4E85', reference: 'Similar to Revlon Colorsilk #4R' },
+              'gray': { name: 'Gray', hex: '#9E9E9E', reference: 'Similar to Clairol Natural Instincts #5' },
+              'white': { name: 'White', hex: '#FAFAFA', reference: 'Similar to L\'Oréal Excellence Creme #10' },
+              'brunette': { name: 'Brunette', hex: '#8D6E63', reference: 'Similar to Garnier Nutrisse #4' },
+              'strawberry blonde': { name: 'Strawberry Blonde', hex: '#E8B4B8', reference: 'Similar to L\'Oréal Feria #7.4' },
+              // Arabic colors
+              'أحمر ناري': { name: 'Fiery Red', hex: '#FF3737', reference: 'Similar to Garnier Olia #6.4' },
+              'أحمر': { name: 'Red', hex: '#D32F2F', reference: 'Similar to Garnier Olia #6.4' },
+              'بني': { name: 'Brown', hex: '#8D6E63', reference: 'Similar to Garnier Nutrisse #4' },
+              'بني داكن': { name: 'Dark Brown', hex: '#5D4037', reference: 'Similar to L\'Oréal Excellence Creme #3' },
+              'بني فاتح': { name: 'Light Brown', hex: '#A1887F', reference: 'Similar to Revlon Colorsilk #5' },
+              'أسود': { name: 'Black', hex: '#212121', reference: 'Similar to Clairol Natural Instincts #1' },
+              'أشقر': { name: 'Blonde', hex: '#F4E4BC', reference: 'Similar to L\'Oréal Feria #9' },
+              'أشقر فاتح': { name: 'Light Blonde', hex: '#F5F5DC', reference: 'Similar to Garnier Nutrisse #9' },
+              'أشقر داكن': { name: 'Dark Blonde', hex: '#D2B48C', reference: 'Similar to Revlon Colorsilk #7' },
+              'رمادي': { name: 'Gray', hex: '#9E9E9E', reference: 'Similar to Clairol Natural Instincts #5' },
+              'أبيض': { name: 'White', hex: '#FAFAFA', reference: 'Similar to L\'Oréal Excellence Creme #10' },
+              'كستنائي': { name: 'Chestnut', hex: '#8D6E63', reference: 'Similar to Garnier Nutrisse #4' }
+            };
+            
+            let referenceColor = null;
+            if (detectedColor && colorReference[detectedColor.toLowerCase()]) {
+              referenceColor = colorReference[detectedColor.toLowerCase()];
+            } else if (detectedColor) {
+              referenceColor = { name: detectedColor, hex: colorHex || '#FF3737' };
+            }
+            
+            result.colorAnalysis = {
+              icon: 'palette',
+              status: 'Analyzed',
+              summary: `Detected Color: ${referenceColor.name}`,
+              detectedColor: referenceColor.name,
+              colorHex: colorHex || referenceColor.hex,
+              colorReference: referenceColor.reference
+            };
+            console.log('Found color analysis:', result.colorAnalysis);
+            break;
           }
+        }
 
-          // Extract recommendations
-          if (trimmedSection.includes('Recommendations:')) {
-            const recommendationsContent = trimmedSection.replace('Recommendations:', '').trim();
-            if (recommendationsContent) {
-              const recommendations = recommendationsContent.split('\n').filter(line => 
-                line.trim() && line.includes('Recommendation:')
-              );
-              
-              result.recommendations = recommendations.slice(0, 5).map((rec, index) => {
-                const textMatch = rec.match(/Recommendation:\s*(.*?)(?:\s*IconHint:|$)/i);
-                const iconMatch = rec.match(/IconHint:\s*(\w+)/i);
-                
-                // Map AI icon hints to valid FontAwesome5 icons
-                const iconMapping = {
-                  'water-drop': 'tint',
-                  'shampoo': 'shower',
-                  'conditioner-mask': 'leaf',
-                  'hair-thickening': 'seedling',
-                  'styling-product': 'magic',
-                  'scissors': 'cut',
-                  'comb': 'brush',
-                  'spray': 'spray-can',
-                  'thermometer': 'thermometer-half',
-                  'vitamins': 'pills',
-                  'massage': 'hands-helping',
-                  'water': 'tint',
-                  'leaf': 'leaf',
-                  'wind': 'wind',
-                  'bulb': 'lightbulb',
-                  'heart': 'heart',
-                  'flame': 'fire',
-                  'dry-shampoo': 'spray-can',
-                  'heat-protect': 'shield-alt',
-                  'detangling': 'brush',
-                  'moisturizing': 'tint',
-                  'volumizing': 'wind',
-                  'deep-conditioning': 'leaf',
-                  'trim': 'cut',
-                  'serum': 'tint',
-                  'mask': 'leaf',
-                  'brush': 'brush',
-                  'comb': 'brush',
-                  'protectant': 'shield-alt',
-                  'treatment': 'leaf',
-                  'nourishing': 'heart',
-                  'repair': 'wrench',
-                  'strengthening': 'dumbbell',
-                  'smoothing': 'magic',
-                  'clarifying': 'shower',
-                  'hydrating': 'tint',
-                  'thickening': 'seedling',
-                  'shine': 'star',
-                  'volume': 'wind',
-                  'texture': 'magic'
-                };
-                
-                const aiIcon = iconMatch ? iconMatch[1] : ['tint', 'leaf', 'wind', 'lightbulb', 'heart'][index % 5];
-                const validIcon = iconMapping[aiIcon] || ['tint', 'leaf', 'wind', 'lightbulb', 'heart'][index % 5];
-                
-                return {
-                  icon: validIcon,
-                  text: textMatch ? textMatch[1].trim() : rec.replace('Recommendation:', '').trim(),
-                };
-              });
-              console.log('Found recommendations:', result.recommendations);
-            }
+        // Extract recommendations - handle both English and Arabic
+        const recommendationsPatterns = [
+          /[*'"\s]*Recommendations:([\s\S]*?)(?=\n[*'"\s]*\*\*|$)/i,
+          /[*'"\s]*التوصيات:([\s\S]*?)(?=\n[*'"\s]*\*\*|$)/i
+        ];
+        
+        console.log('Trying to extract recommendations...');
+        for (const pattern of recommendationsPatterns) {
+          const match = text.match(pattern);
+          console.log('Recommendations pattern match:', match);
+          if (match && match[1]) {
+            const recommendationsContent = match[1].trim();
+            console.log('Recommendations content found:', recommendationsContent);
+            // Split by lines that start with a dash or bullet
+            const recommendations = recommendationsContent.split(/\n|\r/).filter(line => line.trim().startsWith('-'));
+            result.recommendations = recommendations.slice(0, 5).map((rec, index) => {
+              // Remove the dash and any leading/trailing whitespace
+              let recText = rec.replace(/^[-•\s]+/, '').trim();
+              // Extract icon if present
+              const iconMatch = recText.match(/IconHint:\s*(\S+)/i);
+              let icon = iconMatch ? iconMatch[1] : ['tint', 'leaf', 'wind', 'lightbulb', 'heart'][index % 5];
+              recText = recText.replace(/IconHint:\s*\S+/i, '').trim();
+              return {
+                icon,
+                text: recText,
+              };
+            });
+            console.log('Found recommendations:', result.recommendations);
+            break;
           }
-        });
+        }
 
         console.log('Final parsed result:', result);
         console.log('=== PARSING DEBUG END ===');
@@ -451,7 +504,7 @@ const HomeScreen = () => {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.colors.background }}>
         <ActivityIndicator size="large" color={theme.colors.primary} />
-        <Text style={{ marginTop: 16, color: theme.colors.textPrimary }}>Loading your dashboard...</Text>
+        <Text style={{ marginTop: 16, color: theme.colors.textPrimary }}>{t('loading_dashboard')}</Text>
       </View>
     );
   }
@@ -466,16 +519,16 @@ const HomeScreen = () => {
           <Image source={require('../../assets/splash.png')} style={styles.bigLogo} />
         </View>
           <View style={styles.globalBox}>
-            <Text style={styles.globalTitle}>Analysis Unavailable</Text>
+            <Text style={styles.globalTitle}>{t('analysis_unavailable')}</Text>
             <Text style={{ color: theme.colors.error, fontSize: theme.fontSizes.md, textAlign: 'center', marginTop: 16 }}>
-              We could not analyze your images due to technical issues. Please try again or upload new images.
+              {t('analysis_error_message')}
             </Text>
           </View>
           <TouchableOpacity 
             style={styles.analyseButton}
             onPress={handleAnalyseNow}
           >
-            <Text style={styles.analyseButtonText}>Try Analysis Again</Text>
+            <Text style={styles.analyseButtonText}>{t('try_analysis_again')}</Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
@@ -487,13 +540,13 @@ const HomeScreen = () => {
     return (
       <View style={styles.root}>
         <View style={styles.centralLogoContainer}>
-          <Image source={require('../../assets/splash.png')} style={styles.BigLogo} />
+          <Image source={require('../../assets/splash.png')} style={styles.bigLogo} />
         </View>
 
         <ScrollView contentContainerStyle={styles.scrollContent}>
           {/* Global Hair State */}
           <View style={styles.globalBox}>
-            <Text style={styles.globalTitle}>Overall Hair Health</Text>
+            <Text style={styles.globalTitle}>{t('overall_hair_health')}</Text>
             <View style={styles.progressCircleContainer}>
               <View style={styles.progressCircleBg}>
                 <Text style={styles.globalPercent}>{analysisData.hairState}%</Text>
@@ -505,8 +558,8 @@ const HomeScreen = () => {
           <View style={styles.splitBox}>
             <View style={styles.splitItem}>
               <MaterialCommunityIcons name={analysisData.colorAnalysis.icon} size={32} color={theme.colors.accent} />
-              <Text style={styles.splitTitle}>Color</Text>
-              <Text style={styles.splitStatus}>{analysisData.colorAnalysis.status}</Text>
+              <Text style={styles.splitTitle}>{t('color')}</Text>
+              <Text style={styles.splitStatus}>{t('analyzed')}</Text>
               {analysisData.colorAnalysis.colorHex ? (
                 <View style={styles.colorInfoContainer}>
                   <View 
@@ -515,30 +568,30 @@ const HomeScreen = () => {
                       { backgroundColor: analysisData.colorAnalysis.colorHex }
                     ]} 
                   />
-                  <Text style={styles.colorName}>{analysisData.colorAnalysis.detectedColor}</Text>
-                  <Text style={styles.colorReference}>{analysisData.colorAnalysis.colorReference}</Text>
+                  <Text style={[styles.colorName, { textAlign: getTextDirection(analysisData.colorAnalysis.detectedColor) }]}>{analysisData.colorAnalysis.detectedColor}</Text>
+                  <Text style={[styles.colorReference, { textAlign: getTextDirection(analysisData.colorAnalysis.colorReference) }]}>{analysisData.colorAnalysis.colorReference}</Text>
                 </View>
               ) : (
-                <Text style={styles.splitSummary}>{analysisData.colorAnalysis.summary}</Text>
+                <Text style={[styles.splitSummary, { textAlign: getTextDirection(analysisData.colorAnalysis.summary) }]}>{analysisData.colorAnalysis.summary}</Text>
               )}
             </View>
             <View style={styles.splitDivider} />
             <View style={styles.splitItem}>
               <MaterialCommunityIcons name={analysisData.scalpAnalysis.icon} size={32} color={theme.colors.accent} />
-              <Text style={styles.splitTitle}>Scalp</Text>
-              <Text style={styles.splitStatus}>{analysisData.scalpAnalysis.status}</Text>
-              <Text style={styles.splitSummary}>{analysisData.scalpAnalysis.summary}</Text>
+              <Text style={styles.splitTitle}>{t('scalp')}</Text>
+              <Text style={styles.splitStatus}>{t('analyzed')}</Text>
+              <Text style={[styles.splitSummary, { textAlign: getTextDirection(analysisData.scalpAnalysis.summary) }]}>{analysisData.scalpAnalysis.summary}</Text>
             </View>
           </View>
 
           {/* Recommendations */}
           <View style={styles.recommendBox}>
-            <Text style={styles.recommendTitle}>Recommendations</Text>
+            <Text style={styles.recommendTitle}>{t('recommendations')}</Text>
             <View style={styles.recommendList}>
               {analysisData.recommendations.map((rec, idx) => (
                 <View key={idx} style={styles.recommendItem}>
                   <FontAwesome5 name={rec.icon} size={22} color={theme.colors.accent} style={{ marginRight: 12 }} />
-                  <Text style={styles.recommendText}>{rec.text}</Text>
+                  <Text style={[styles.recommendText, { textAlign: getTextDirection(rec.text) }]}>{rec.text}</Text>
                 </View>
               ))}
             </View>
@@ -546,7 +599,7 @@ const HomeScreen = () => {
 
           {/* Trending Recipes */}
           <View style={styles.trendingBox}>
-            <Text style={styles.trendingTitle}>Trending Recipes</Text>
+            <Text style={styles.trendingTitle}>{t('trending_recipes')}</Text>
             {recipesLoading ? (
               <ActivityIndicator size="small" color={theme.colors.primary} style={{ marginVertical: 20 }} />
             ) : trendingRecipes.length > 0 ? (
@@ -568,22 +621,28 @@ const HomeScreen = () => {
                 scrollEnabled={false}
               />
             ) : (
-              <Text style={styles.noRecipesText}>No recipes available at the moment.</Text>
+              <Text style={styles.noRecipesText}>{t('no_recipes')}</Text>
             )}
           </View>
 
-          {/* Analyse Now Button */}
-          <TouchableOpacity 
-            style={styles.analyseButton}
-            onPress={handleAnalyseNow}
-            disabled={analysing}
-          >
-            {analysing ? (
-              <ActivityIndicator size="small" color={theme.colors.textPrimary} />
-            ) : (
-              <Text style={styles.analyseButtonText}>Analyse Now</Text>
+          {/* Action Buttons */}
+          <View style={styles.actionButtons}>
+            <TouchableOpacity 
+              style={styles.actionButton}
+              onPress={handleAnalyseNow}
+            >
+              <Text style={styles.analyseButtonText}>{t('analyse_now')}</Text>
+            </TouchableOpacity>
+
+            {analysis && (
+              <TouchableOpacity 
+                style={[styles.actionButton, styles.secondaryButton]}
+                onPress={() => navigation.navigate('AnalysisResult', { analysisId: analysis.id })}
+              >
+                <Text style={[styles.analyseButtonText, styles.secondaryButtonText]}>{t('view_full_analysis')}</Text>
+              </TouchableOpacity>
             )}
-          </TouchableOpacity>
+          </View>
         </ScrollView>
 
         {/* Recipe Modal */}
@@ -595,7 +654,7 @@ const HomeScreen = () => {
               
               {selectedRecipe?.ingredients && (
                 <View style={styles.recipeSection}>
-                  <Text style={styles.recipeSectionTitle}>Ingredients:</Text>
+                  <Text style={styles.recipeSectionTitle}>{t('ingredients')}</Text>
                   {selectedRecipe.ingredients.map((ingredient, index) => (
                     <Text key={index} style={styles.recipeIngredient}>
                       • {ingredient.name}: {ingredient.amount}
@@ -606,7 +665,7 @@ const HomeScreen = () => {
               
               {selectedRecipe?.instructions && (
                 <View style={styles.recipeSection}>
-                  <Text style={styles.recipeSectionTitle}>Instructions:</Text>
+                  <Text style={styles.recipeSectionTitle}>{t('instructions')}</Text>
                   {(() => {
                     console.log('DEBUG: instructions type:', typeof selectedRecipe.instructions);
                     console.log('DEBUG: instructions value:', selectedRecipe.instructions);
@@ -683,7 +742,7 @@ const HomeScreen = () => {
       </View>
         {/* Global Hair State */}
         <View style={styles.globalBox}>
-          <Text style={styles.globalTitle}>Overall Hair Health</Text>
+          <Text style={styles.globalTitle}>{t('overall_hair_health')}</Text>
           <View style={styles.progressCircleContainer}>
             <View style={styles.progressCircleBg}>
               <Text style={styles.globalPercent}>{analysisData.hairState}%</Text>
@@ -695,8 +754,8 @@ const HomeScreen = () => {
         <View style={styles.splitBox}>
           <View style={styles.splitItem}>
             <MaterialCommunityIcons name={analysisData.colorAnalysis.icon} size={32} color={theme.colors.accent} />
-            <Text style={styles.splitTitle}>Color</Text>
-            <Text style={styles.splitStatus}>{analysisData.colorAnalysis.status}</Text>
+            <Text style={styles.splitTitle}>{t('color')}</Text>
+            <Text style={styles.splitStatus}>{t('analyzed')}</Text>
             {analysisData.colorAnalysis.colorHex ? (
               <View style={styles.colorInfoContainer}>
                 <View 
@@ -705,30 +764,30 @@ const HomeScreen = () => {
                     { backgroundColor: analysisData.colorAnalysis.colorHex }
                   ]} 
                 />
-                <Text style={styles.colorName}>{analysisData.colorAnalysis.detectedColor}</Text>
-                <Text style={styles.colorReference}>{analysisData.colorAnalysis.colorReference}</Text>
+                <Text style={[styles.colorName, { textAlign: getTextDirection(analysisData.colorAnalysis.detectedColor) }]}>{analysisData.colorAnalysis.detectedColor}</Text>
+                <Text style={[styles.colorReference, { textAlign: getTextDirection(analysisData.colorAnalysis.colorReference) }]}>{analysisData.colorAnalysis.colorReference}</Text>
               </View>
             ) : (
-              <Text style={styles.splitSummary}>{analysisData.colorAnalysis.summary}</Text>
+              <Text style={[styles.splitSummary, { textAlign: getTextDirection(analysisData.colorAnalysis.summary) }]}>{analysisData.colorAnalysis.summary}</Text>
             )}
           </View>
           <View style={styles.splitDivider} />
           <View style={styles.splitItem}>
             <MaterialCommunityIcons name={analysisData.scalpAnalysis.icon} size={32} color={theme.colors.accent} />
-            <Text style={styles.splitTitle}>Scalp</Text>
-            <Text style={styles.splitStatus}>{analysisData.scalpAnalysis.status}</Text>
-            <Text style={styles.splitSummary}>{analysisData.scalpAnalysis.summary}</Text>
+            <Text style={styles.splitTitle}>{t('scalp')}</Text>
+            <Text style={styles.splitStatus}>{t('analyzed')}</Text>
+            <Text style={[styles.splitSummary, { textAlign: getTextDirection(analysisData.scalpAnalysis.summary) }]}>{analysisData.scalpAnalysis.summary}</Text>
           </View>
         </View>
 
         {/* Recommendations */}
         <View style={styles.recommendBox}>
-          <Text style={styles.recommendTitle}>Recommendations</Text>
+          <Text style={styles.recommendTitle}>{t('recommendations')}</Text>
           <View style={styles.recommendList}>
             {analysisData.recommendations.map((rec, idx) => (
               <View key={idx} style={styles.recommendItem}>
                 <FontAwesome5 name={rec.icon} size={22} color={theme.colors.accent} style={{ marginRight: 12 }} />
-                <Text style={styles.recommendText}>{rec.text}</Text>
+                <Text style={[styles.recommendText, { textAlign: getTextDirection(rec.text) }]}>{rec.text}</Text>
               </View>
             ))}
           </View>
@@ -736,7 +795,7 @@ const HomeScreen = () => {
 
         {/* Trending Recipes */}
         <View style={styles.trendingBox}>
-          <Text style={styles.trendingTitle}>Trending Recipes</Text>
+          <Text style={styles.trendingTitle}>{t('trending_recipes')}</Text>
           {recipesLoading ? (
             <ActivityIndicator size="small" color={theme.colors.primary} style={{ marginVertical: 20 }} />
           ) : trendingRecipes.length > 0 ? (
@@ -758,7 +817,26 @@ const HomeScreen = () => {
               scrollEnabled={false}
             />
           ) : (
-            <Text style={styles.noRecipesText}>No recipes available at the moment.</Text>
+            <Text style={styles.noRecipesText}>{t('no_recipes')}</Text>
+          )}
+        </View>
+
+        {/* Action Buttons */}
+        <View style={styles.actionButtons}>
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={handleAnalyseNow}
+          >
+            <Text style={styles.analyseButtonText}>{t('analyse_now')}</Text>
+          </TouchableOpacity>
+
+          {analysis && (
+            <TouchableOpacity 
+              style={[styles.actionButton, styles.secondaryButton]}
+              onPress={() => navigation.navigate('AnalysisResult', { analysisId: analysis.id })}
+            >
+              <Text style={[styles.analyseButtonText, styles.secondaryButtonText]}>{t('view_full_analysis')}</Text>
+            </TouchableOpacity>
           )}
         </View>
       </ScrollView>
@@ -772,7 +850,7 @@ const HomeScreen = () => {
             
             {selectedRecipe?.ingredients && (
               <View style={styles.recipeSection}>
-                <Text style={styles.recipeSectionTitle}>Ingredients:</Text>
+                <Text style={styles.recipeSectionTitle}>{t('ingredients')}</Text>
                 {selectedRecipe.ingredients.map((ingredient, index) => (
                   <Text key={index} style={styles.recipeIngredient}>
                     • {ingredient.name}: {ingredient.amount}
@@ -783,7 +861,7 @@ const HomeScreen = () => {
             
             {selectedRecipe?.instructions && (
               <View style={styles.recipeSection}>
-                <Text style={styles.recipeSectionTitle}>Instructions:</Text>
+                <Text style={styles.recipeSectionTitle}>{t('instructions')}</Text>
                 {(() => {
                   console.log('DEBUG: instructions type:', typeof selectedRecipe.instructions);
                   console.log('DEBUG: instructions value:', selectedRecipe.instructions);
@@ -1231,6 +1309,38 @@ const styles = StyleSheet.create({
     color: theme.colors.accent,
     fontFamily: theme.fonts.body,
     marginBottom: 16,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  actionButton: {
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.borderRadius.lg,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    ...theme.shadows.medium,
+    borderWidth: 1,
+    borderColor: theme.colors.accentGlow,
+  },
+  secondaryButton: {
+    backgroundColor: theme.colors.secondary,
+    borderRadius: theme.borderRadius.lg,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    ...theme.shadows.medium,
+    borderWidth: 1,
+    borderColor: theme.colors.accentGlow,
+  },
+  secondaryButtonText: {
+    color: theme.colors.textPrimary,
+    fontSize: theme.fontSizes.md,
+    fontWeight: 'bold',
+    fontFamily: theme.fonts.body,
   },
 });
 

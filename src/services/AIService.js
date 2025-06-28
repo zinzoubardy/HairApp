@@ -1,6 +1,8 @@
 import { TOGETHER_AI_API_KEY } from '@env';
 import Together from "together-ai";
 import Constants from 'expo-constants';
+import { getPrompt } from '../i18n/prompts';
+import i18n from '../i18n';
 
 // Basic error checking for the API key
 if (!TOGETHER_AI_API_KEY) {
@@ -20,13 +22,26 @@ const getTogetherApiKey = () => {
 
 const together = new Together({ apiKey: getTogetherApiKey() });
 
+// Get current language for AI prompts
+const getCurrentLanguage = () => {
+  try {
+    return i18n.locale || 'en';
+  } catch (error) {
+    console.log('Error getting current language:', error);
+    return 'en';
+  }
+};
+
 export const getAIHairstyleAdvice = async (prompt) => {
   if (!prompt || typeof prompt !== 'string' || prompt.trim() === "") {
     return { success: false, error: "Prompt cannot be empty." };
   }
 
-  // Check if the question is hair-related
-  const hairKeywords = [
+  // Get current language
+  const currentLanguage = getCurrentLanguage();
+
+  // Hair-related keywords for each language
+  const hairKeywordsEn = [
     'hair', 'scalp', 'shampoo', 'conditioner', 'styling', 'treatment', 'color', 'dye', 
     'cut', 'trim', 'frizz', 'dry', 'oily', 'damage', 'split ends', 'volume', 'texture',
     'curl', 'straight', 'wavy', 'coily', 'dandruff', 'itchy', 'falling', 'thinning',
@@ -40,6 +55,32 @@ export const getAIHairstyleAdvice = async (prompt) => {
     'braids', 'twists', 'buns', 'ponytail', 'updo', 'down', 'part', 'side part',
     'middle part', 'no part', 'hairline', 'edges', 'baby hairs', 'flyaways'
   ];
+  const hairKeywordsAr = [
+    'شعر', 'فروة', 'الشعر', 'فروة الرأس', 'شامبو', 'بلسم', 'تصفيف', 'علاج', 'لون', 'صبغة',
+    'قص', 'تقليم', 'تقصف', 'جاف', 'دهني', 'تساقط', 'حجم', 'ملمس', 'مجعد', 'مفرود', 'متموج',
+    'قشرة', 'حكة', 'نمو', 'طول', 'ستايل', 'منتج', 'روتين', 'غسل', 'فرشاة', 'مشط',
+    'سيروم', 'زيت', 'قناع', 'حرارة', 'مجفف', 'مكواة', 'طبيعي', 'كيميائي', 'دائم', 'مؤقت',
+    'خصل', 'أطراف', 'تسريحة', 'تسريحات', 'تسريح', 'تنعيم', 'ترطيب', 'تغذية', 'حماية', 'تسريح حراري',
+    'تسريح بارد', 'تسريح مبلل', 'تسريح جاف', 'تسريح يومي', 'تسريح أسبوعي', 'تسريح شهري', 'تسريح موسمي',
+    'تسريح صيفي', 'تسريح شتوي', 'تسريح ربيعي', 'تسريح خريفي', 'تسريح احترافي', 'تسريح منزلي', 'تسريح سريع',
+    'تسريح طويل', 'تسريح قصير', 'تسريح متوسط', 'تسريح كثيف', 'تسريح خفيف', 'تسريح ناعم', 'تسريح خشن',
+    'تسريح مموج', 'تسريح مجعد', 'تسريح مفرود', 'تسريح طبيعي', 'تسريح صناعي', 'تسريح دائم', 'تسريح مؤقت'
+  ];
+  const hairKeywordsFr = [
+    'cheveux', 'cuir chevelu', 'shampooing', 'après-shampooing', 'coiffure', 'traitement', 'couleur', 'teinture',
+    'couper', 'tailler', 'fourches', 'sec', 'gras', 'chute', 'volume', 'texture', 'bouclé', 'lisse', 'ondulé',
+    'pellicules', 'démangeaisons', 'croissance', 'longueur', 'style', 'produit', 'routine', 'laver', 'brosse', 'peigne',
+    'sérum', 'huile', 'masque', 'chaleur', 'sèche-cheveux', 'fer à lisser', 'naturel', 'chimique', 'permanent', 'temporaire',
+    'mèches', 'pointes', 'coiffure', 'coiffures', 'coiffer', 'lissage', 'hydratation', 'nutrition', 'protection', 'coiffage thermique',
+    'coiffage à froid', 'coiffage mouillé', 'coiffage sec', 'coiffage quotidien', 'coiffage hebdomadaire', 'coiffage mensuel', 'coiffage saisonnier',
+    'coiffage estival', 'coiffage hivernal', 'coiffage printanier', 'coiffage automnal', 'coiffage professionnel', 'coiffage maison', 'coiffage rapide',
+    'coiffage long', 'coiffage court', 'coiffage moyen', 'coiffage épais', 'coiffage fin', 'coiffage doux', 'coiffage rugueux',
+    'coiffage ondulé', 'coiffage bouclé', 'coiffage lisse', 'coiffage naturel', 'coiffage synthétique', 'coiffage permanent', 'coiffage temporaire'
+  ];
+
+  let hairKeywords = hairKeywordsEn;
+  if (currentLanguage === 'ar') hairKeywords = hairKeywordsAr;
+  if (currentLanguage === 'fr') hairKeywords = hairKeywordsFr;
 
   const promptLower = prompt.toLowerCase();
   const isHairRelated = hairKeywords.some(keyword => promptLower.includes(keyword));
@@ -47,28 +88,23 @@ export const getAIHairstyleAdvice = async (prompt) => {
   if (!isHairRelated) {
     return { 
       success: false, 
-      error: "I can only provide advice about hair, scalp, and hair care topics. Please ask me about your hair concerns, styling, products, or hair health." 
+      error: currentLanguage === 'ar'
+        ? 'يمكنني فقط تقديم النصائح حول الشعر وفروة الرأس ومواضيع العناية بالشعر. يرجى سؤالي عن مخاوفك المتعلقة بالشعر أو التصفيف أو المنتجات أو صحة الشعر.'
+        : currentLanguage === 'fr'
+        ? "Je ne peux donner des conseils que sur les cheveux, le cuir chevelu et les soins capillaires. Veuillez me poser des questions sur vos préoccupations capillaires, le coiffage, les produits ou la santé des cheveux."
+        : "I can only provide advice about hair, scalp, and hair care topics. Please ask me about your hair concerns, styling, products, or hair health."
     };
   }
 
   try {
     console.log("Sending hair-related prompt to Together AI:", prompt);
     
-    const enhancedPrompt = `
-      You are an expert hair and scalp advisor. You can ONLY provide advice about hair, scalp, and hair care topics. 
-      If the user asks about anything else, politely redirect them to hair-related questions.
-      
-      USER'S QUESTION: ${prompt}
-      
-      Please provide detailed, helpful advice about their hair concern. Focus on:
-      - Professional hair care recommendations
-      - Product suggestions when appropriate
-      - Styling tips and techniques
-      - Hair health and maintenance advice
-      - Scalp care recommendations
-      
-      Be specific, detailed, and provide actionable advice. Always stay within the hair care domain.
-    `;
+    // Get language-specific AI advisor prompt
+    const aiAdvisorPrompt = getPrompt('aiAdvisor', currentLanguage);
+    
+    const enhancedPrompt = `${aiAdvisorPrompt}
+
+USER'S QUESTION: ${prompt}`;
     
     const response = await together.chat.completions.create({
       messages: [{ role: 'user', content: enhancedPrompt }],
@@ -175,29 +211,14 @@ export const getHairAnalysis = async (profile, imageReferences) => {
     
     if (imageAnalyses.length > 0) {
       console.log("Vision model analysis successful, combining results...");
-      // Now combine all analyses into a comprehensive report
-      const combinedPrompt = `Based on the individual image analyses below, create a comprehensive hair analysis report:
+      // Now combine all analyses into a comprehensive report using language-specific prompt
+      const currentLanguage = getCurrentLanguage();
+      const hairAnalysisPrompt = getPrompt('hairAnalysis', currentLanguage);
+      
+      const combinedPrompt = `${hairAnalysisPrompt}
 
 INDIVIDUAL IMAGE ANALYSES:
-${imageAnalyses.map(analysis => `**${analysis.angle.toUpperCase()} VIEW:**\n${analysis.analysis}`).join('\n\n')}
-
-Create a comprehensive report with:
-
-**1. Global Hair State Score:**
-Based on the combined analyses above, provide a percentage score (0-100%) and justify with specific observations.
-
-**2. Detailed Scalp Analysis:**
-Summarize the scalp condition based on the analyses above.
-
-**3. Detailed Color Analysis:**
-Analyze the hair color characteristics based on the analyses above.
-
-**4. Key Observations & Potential Issues:**
-List specific observations and potential issues based on the analyses above.
-
-**5. Recommendations:**
-Provide 3-5 actionable recommendations based on the analyses above. For each recommendation, suggest a simple keyword for an icon.
-Format: "Recommendation: [advice]. IconHint: [icon-keyword]"`;
+${imageAnalyses.map(analysis => `**${analysis.angle.toUpperCase()} VIEW:**\n${analysis.analysis}`).join('\n\n')}`;
 
       const finalResponse = await together.chat.completions.create({
         messages: [{ role: 'user', content: combinedPrompt }],
@@ -207,29 +228,15 @@ Format: "Recommendation: [advice]. IconHint: [icon-keyword]"`;
       });
 
       if (finalResponse && finalResponse.choices && finalResponse.choices[0] && finalResponse.choices[0].message) {
+        console.log("Final analysis response:", finalResponse.choices[0].message.content);
         return { success: true, data: finalResponse.choices[0].message.content };
+      } else {
+        console.error("Unexpected final response structure:", finalResponse);
+        return { success: false, error: "Failed to parse final AI analysis response." };
       }
-    }
-    // If vision model fails completely, use a very direct text approach
-    console.log("Using direct text model analysis...");
-    let prompt = `You are analyzing hair images. The user has provided these image URLs:\n\n`;
-    if (imageReferences.up) prompt += `Top view: ${imageReferences.up}\n`;
-    if (imageReferences.back) prompt += `Back view: ${imageReferences.back}\n`;
-    if (imageReferences.left) prompt += `Left view: ${imageReferences.left}\n`;
-    if (imageReferences.right) prompt += `Right view: ${imageReferences.right}\n`;
-    prompt += `\nYou need to analyze these hair images. Since you cannot directly view images, please provide a general analysis structure that the user can fill in based on what they observe in their own images.\n\n**1. Global Hair State Score:**\n[User should examine their images and provide a score based on what they see]\n\n**2. Detailed Scalp Analysis:**\n[User should describe what they observe about their scalp in the images]\n\n**3. Detailed Color Analysis:**\n[User should describe the hair color they see in the images]\n\n**4. Key Observations & Potential Issues:**\n[User should list specific observations from their images]\n\n**5. Recommendations:**\n[User should provide recommendations based on their observations]`;
-    const response = await together.chat.completions.create({
-      messages: [{ role: 'user', content: prompt }],
-      model: 'meta-llama/Llama-3.3-70B-Instruct-Turbo-Free',
-      max_tokens: 1500,
-      temperature: 0.7,
-    });
-    console.log("Received hair analysis response:", response);
-    if (response && response.choices && response.choices[0] && response.choices[0].message) {
-      return { success: true, data: response.choices[0].message.content };
     } else {
-      console.error("Unexpected response structure from Together AI for hair analysis:", response);
-      return { success: false, error: "Failed to parse AI hair analysis response." };
+      console.error("No image analyses available");
+      return { success: false, error: "No image analyses were successful." };
     }
   } catch (error) {
     console.error("Error calling Together AI API for hair analysis:", error);
@@ -242,19 +249,13 @@ export const getGeneralHairAnalysis = async (imageUrl, question) => {
     return { success: false, error: "Image URL and question are required for analysis." };
   }
 
-  const prompt = `
-    You are an expert hair and scalp advisor. Analyze the provided hair image and answer the user's specific question about their hair.
+  // Use the selected language for the prompt
+  const currentLanguage = getCurrentLanguage();
+  const generalAnalysisPrompt = getPrompt('generalAnalysis', currentLanguage);
 
-    USER'S QUESTION: ${question}
+  const prompt = `${generalAnalysisPrompt}
 
-    Please provide a detailed, helpful response based on what you can observe in the image. Focus on:
-    - Visual characteristics of the hair
-    - Specific issues or concerns visible in the image
-    - Practical advice and recommendations
-    - Professional insights based on the image analysis
-
-    Be specific, detailed, and provide actionable advice based on the visual evidence in the image.
-  `;
+USER'S QUESTION: ${question}`;
 
   try {
     console.log("Sending general hair analysis with image:", imageUrl);
@@ -299,7 +300,13 @@ export const getGeneralHairAnalysis = async (imageUrl, question) => {
 // Call Together AI to generate a personalized routine from analysis data
 export const callTogetherAIForRoutine = async (analysisData) => {
   const together = new Together({ apiKey: getTogetherApiKey() });
-  const prompt = `You are a professional hair care assistant. Based on the following hair analysis, generate a personalized daily and weekly hair care routine.\n\nRequirements:\n- The routine must have AT LEAST 3 steps.\n- Each step must have a clear title and a detailed description.\n- The response MUST be valid JSON in the following format:\n{\n  \"title\": \"string\",\n  \"steps\": [\n    { \"title\": \"string\", \"description\": \"string\" },\n    ...\n  ]\n}\n- Do NOT include any markdown, explanations, or extra text.\n\nHair Analysis:\n${JSON.stringify(analysisData, null, 2)}`;
+  const currentLanguage = getCurrentLanguage();
+  const routinePrompt = getPrompt('routineGeneration', currentLanguage);
+  
+  const prompt = `${routinePrompt}
+
+Hair Analysis:
+${JSON.stringify(analysisData, null, 2)}`;
 
   try {
     const response = await together.chat.completions.create({

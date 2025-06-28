@@ -19,6 +19,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { getProfile, updateProfile, uploadProfileImage, saveHairAnalysisResult } from "../services/SupabaseService";
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { getHairAnalysis } from '../services/AIService';
+import { useTranslation } from '../i18n';
 
 const HAIR_IMAGE_SLOTS = [
   { angle: 'up', label: 'Top View', icon: 'arrow-up-bold-circle', description: 'Photo of the top of your head' },
@@ -29,6 +30,7 @@ const HAIR_IMAGE_SLOTS = [
 
 const ProfileScreen = ({ navigation }) => {
   const { user, signOut, loadingAuthAction } = useAuth();
+  const { t } = useTranslation();
   const [fullName, setFullName] = useState("");
   const [username, setUsername] = useState("");
   const [hairGoal, setHairGoal] = useState("");
@@ -56,7 +58,7 @@ const ProfileScreen = ({ navigation }) => {
       if (Platform.OS !== 'web') {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== 'granted') {
-          Alert.alert('Permission Denied', 'Sorry, we need camera roll permissions to make this work!');
+          Alert.alert(t('permission_required'), 'Sorry, we need camera roll permissions to make this work!');
         }
       }
     })();
@@ -104,7 +106,7 @@ const ProfileScreen = ({ navigation }) => {
         }
       } catch (e) { // Catch any other exceptions
         console.error("Exception during loadProfileData:", e);
-        Alert.alert("Error", "An unexpected error occurred while loading your profile.");
+        Alert.alert(t('error'), "An unexpected error occurred while loading your profile.");
       } finally {
         setIsLoading(false);
       }
@@ -115,7 +117,7 @@ const ProfileScreen = ({ navigation }) => {
 
   const handleSaveProfile = async () => {
     if (!user) {
-      Alert.alert("Not Logged In", "You must be logged in to save your profile.");
+      Alert.alert(t('not_logged_in'), "You must be logged in to save your profile.");
       return;
     }
 
@@ -138,9 +140,9 @@ const ProfileScreen = ({ navigation }) => {
     try {
       const { data, error } = await updateProfile(profileDetails);
       if (error) {
-        Alert.alert("Save Error", `Could not save your profile: ${error.message}`);
+        Alert.alert(t('save_error'), `${t('save_error')}: ${error.message}`);
       } else {
-        Alert.alert("Profile Saved", "Your profile has been successfully saved to the server!");
+        Alert.alert(t('success'), t('profile_saved'));
         if (data) { // Update local state with any transformations from Supabase (e.g. default values)
             setFullName(data.full_name || "");
             setUsername(data.username || "");
@@ -159,11 +161,11 @@ const ProfileScreen = ({ navigation }) => {
         // After successful save, trigger AI analysis if all images are uploaded
         if (allImagesUploaded) {
           Alert.alert(
-            "AI Analysis Starting", 
+            t('ai_analysis_starting'), 
             "Your profile is saved! Starting AI analysis of your hair images...",
             [
               {
-                text: "OK",
+                text: t('ok'),
                 onPress: async () => {
                   try {
                     setIsLoading(true);
@@ -198,9 +200,9 @@ const ProfileScreen = ({ navigation }) => {
                       console.error("AI Analysis failed:", error);
                       Alert.alert('AI Analysis Failed', `Could not analyze your hair: ${error || 'Unknown error'}. Please try again later.`);
                     }
-                  } catch (error) {
-                    console.error('AI Analysis error:', error);
-                    Alert.alert('AI Analysis Error', 'An error occurred during analysis. Please try again.');
+                  } catch (analysisError) {
+                    console.error("Exception during AI analysis:", analysisError);
+                    Alert.alert('Analysis Error', 'An unexpected error occurred during analysis. Please try again later.');
                   } finally {
                     setIsLoading(false);
                   }
@@ -210,101 +212,84 @@ const ProfileScreen = ({ navigation }) => {
           );
         } else {
           Alert.alert(
-            "Images Needed", 
-            "Please upload all 4 hair images (Top, Back, Left, Right) to get AI analysis.",
-            [{ text: "OK" }]
+            t('images_needed'),
+            "Please upload all four hair images to enable AI analysis.",
+            [{ text: t('ok') }]
           );
         }
       }
-    } catch (e) { // Catch any other exceptions
-        console.error("Exception during handleSaveProfile:", e);
-        Alert.alert("Error", "An unexpected error occurred while saving your profile.");
+    } catch (e) {
+      console.error("Exception during saveProfile:", e);
+      Alert.alert(t('error'), "An unexpected error occurred while saving your profile.");
     } finally {
       setIsSaving(false);
     }
   };
 
   const handleSignOut = async () => {
-    const { error } = await signOut();
-    if (error) {
-      Alert.alert("Sign Out Error", error.message);
-    } else {
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Splash' }],
-      });
+    try {
+      await signOut();
+    } catch (error) {
+      Alert.alert(t('error'), error.message);
     }
-    // Navigation to AuthScreen will be handled by onAuthStateChange
   };
 
   const handlePickAndUploadImage = async (angle) => {
-    console.log('Upload button pressed for angle:', angle); // Debug log
     if (!user) {
-      Alert.alert("Not Logged In", "You must be logged in to upload images.");
+      Alert.alert(t('not_logged_in'), "You must be logged in to upload images.");
       return;
     }
 
-    // Request permissions on button press (for reliability)
-    let permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (permissionResult.status !== 'granted') {
-      Alert.alert('Permission Denied', 'Sorry, we need camera roll permissions to make this work!');
-      return;
-    }
-
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images, // Correct for SDK 52
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.7,
-    });
-    console.log('ImagePicker result:', result); // Debug log
-
-    if (result.cancelled || !result.assets || result.assets.length === 0) {
-      Alert.alert('No Image Selected', 'You did not select any image.');
-      return;
-    }
-
-    const fileUri = result.assets[0].uri;
-    setUploadingAngle(angle); // Show loading indicator for this angle
+    setUploadingAngle(angle);
     try {
-      const { data: uploadData, error: uploadError } = await uploadProfileImage(user.id, fileUri, angle);
+      // Launch image picker
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: 'Images',
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
 
-      if (uploadError) {
-        Alert.alert('Upload Error', uploadError.message || 'Failed to upload image.');
-        setUploadingAngle(null);
-        return;
-      }
-      if (uploadData && uploadData.publicUrl) {
-        console.log(`Setting ${angle} image URL:`, uploadData.publicUrl);
-        switch (angle) {
-          case "up": 
-            setProfilePicUpUrl(uploadData.publicUrl); 
-            console.log('Updated profilePicUpUrl state');
-            break;
-          case "right": 
-            setProfilePicRightUrl(uploadData.publicUrl); 
-            console.log('Updated profilePicRightUrl state');
-            break;
-          case "left": 
-            setProfilePicLeftUrl(uploadData.publicUrl); 
-            console.log('Updated profilePicLeftUrl state');
-            break;
-          case "back": 
-            setProfilePicBackUrl(uploadData.publicUrl); 
-            console.log('Updated profilePicBackUrl state');
-            break;
-          default: break;
+      if (!result.canceled && result.assets && result.assets[0]) {
+        const imageUri = result.assets[0].uri;
+        console.log(`Uploading ${angle} image:`, imageUri);
+
+        // Upload to Cloudinary
+        const { data, error } = await uploadProfileImage(user.id, imageUri, angle);
+        
+        if (!error) {
+          // Update the appropriate state based on angle
+          switch (angle) {
+            case "up":
+              setProfilePicUpUrl(data.publicUrl);
+              break;
+            case "right":
+              setProfilePicRightUrl(data.publicUrl);
+              break;
+            case "left":
+              setProfilePicLeftUrl(data.publicUrl);
+              break;
+            case "back":
+              setProfilePicBackUrl(data.publicUrl);
+              break;
+          }
+          
+          Alert.alert(t('success'), `${angle.charAt(0).toUpperCase() + angle.slice(1)} ${t('upload_success')}`);
+        } else {
+          console.error("Upload failed:", error);
+          const errorMessage = typeof error === 'string' ? error : error?.message || 'Unknown error';
+          if (typeof errorMessage === 'string' && (errorMessage.includes("network") || errorMessage.includes("connection"))) {
+            Alert.alert(t('error'), t('network_error'));
+          } else {
+            Alert.alert(t('error'), `${t('upload_exception')}: ${errorMessage}`);
+          }
         }
-        Alert.alert("Upload Success", `${angle.charAt(0).toUpperCase() + angle.slice(1)} image uploaded! Remember to save your profile to keep this change.`);
       }
     } catch (e) {
-      if (e.message && e.message.includes('Network request failed')) {
-        Alert.alert("Network Error", "Could not upload image. Please check your internet connection, Supabase URL, and that your device can reach your Supabase project. If on a real device, Supabase must be accessible from the public internet.");
-      } else {
-        Alert.alert("Upload Exception", `An error occurred: ${e.message}`);
-      }
+      console.error("Exception during image upload:", e);
+      Alert.alert(t('error'), `${t('upload_exception')}: ${e.message}`);
     } finally {
-      setUploadingAngle(null); // Hide loading indicator
+      setUploadingAngle(null);
     }
   };
 
@@ -323,7 +308,7 @@ const ProfileScreen = ({ navigation }) => {
     return (
       <View style={{...styles.container, justifyContent: "center", alignItems: "center", backgroundColor: theme.colors.background}}>
         <ActivityIndicator size="large" color={theme.colors.primary} />
-        <Text style={{marginTop: theme.spacing.md, fontFamily: theme.fonts.body, color: theme.colors.textPrimary}}>Loading Your Profile...</Text>
+        <Text style={{marginTop: theme.spacing.md, fontFamily: theme.fonts.body, color: theme.colors.textPrimary}}>{t('loading_profile')}</Text>
       </View>
     );
   }
@@ -342,17 +327,17 @@ const ProfileScreen = ({ navigation }) => {
         <Image source={require('../../assets/splash.png')} style={styles.bigLogo} />
       </View>
       <View style={styles.headerContainer}>
-        <Text style={styles.headerTitle}>My Profile</Text>
+        <Text style={styles.headerTitle}>{t('my_profile')}</Text>
       </View>
         <Text style={styles.subtitle}>Manage your hair profile and preferences</Text>
         <Text style={styles.emailText}>Email: {user?.email}</Text>
 
         {/* Profile Details Form */}
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Full Name</Text>
+          <Text style={styles.label}>{t('full_name')}</Text>
           <TextInput
             style={styles.input}
-            placeholder="Enter your full name"
+            placeholder={t('enter_full_name')}
             placeholderTextColor={theme.colors.textSecondary}
             value={fullName}
             onChangeText={setFullName}
@@ -362,10 +347,10 @@ const ProfileScreen = ({ navigation }) => {
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Username</Text>
+          <Text style={styles.label}>{t('username')}</Text>
           <TextInput
             style={styles.input}
-            placeholder="Choose a username"
+            placeholder={t('choose_username')}
             placeholderTextColor={theme.colors.textSecondary}
             value={username}
             onChangeText={setUsername}
@@ -375,7 +360,7 @@ const ProfileScreen = ({ navigation }) => {
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Hair Goal</Text>
+          <Text style={styles.label}>{t('hair_goal')}</Text>
           <TextInput
             style={styles.input}
             placeholder="e.g., Longer hair, More volume, Healthier scalp"
@@ -388,7 +373,7 @@ const ProfileScreen = ({ navigation }) => {
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Allergies & Sensitivities</Text>
+          <Text style={styles.label}>{t('allergies')}</Text>
           <TextInput
             style={styles.input}
             placeholder="e.g., Sulfates, Silicones, Fragrances"
@@ -401,7 +386,7 @@ const ProfileScreen = ({ navigation }) => {
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Hair Color</Text>
+          <Text style={styles.label}>{t('hair_color')}</Text>
           <TextInput
             style={styles.input}
             placeholder="e.g., Natural brown, Dyed blonde, Black"
@@ -414,7 +399,7 @@ const ProfileScreen = ({ navigation }) => {
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Hair Condition</Text>
+          <Text style={styles.label}>{t('hair_condition')}</Text>
           <TextInput
             style={styles.input}
             placeholder="e.g., Dry, Oily, Healthy, Damaged ends"
@@ -427,7 +412,7 @@ const ProfileScreen = ({ navigation }) => {
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Hair Concerns & Preferences</Text>
+          <Text style={styles.label}>{t('hair_concerns')}</Text>
           <TextInput
             style={[styles.input, styles.textArea]}
             placeholder="e.g., Frizz control, prefer wash-n-go styles, want more volume"
@@ -443,7 +428,7 @@ const ProfileScreen = ({ navigation }) => {
 
         {/* Profile Image Upload Section */}
         <View style={styles.sectionTitleContainer}>
-          <Text style={styles.sectionTitle}>Your Hair Images</Text>
+          <Text style={styles.sectionTitle}>{t('upload_images')}</Text>
         </View>
         <Text style={{textAlign: 'center', color: theme.colors.textSecondary, marginBottom: theme.spacing.md}}>
           Upload clear photos of your hair from each angle for best results: Top, Back, Left, and Right.
@@ -486,7 +471,7 @@ const ProfileScreen = ({ navigation }) => {
           {isSaving ? (
             <ActivityIndicator size="small" color={theme.colors.textPrimary} />
           ) : (
-            <Text style={styles.buttonText}>Save Profile</Text>
+            <Text style={styles.buttonText}>{t('save_profile')}</Text>
           )}
         </TouchableOpacity>
 
@@ -499,7 +484,7 @@ const ProfileScreen = ({ navigation }) => {
             {loadingAuthAction && !isSaving ? (
               <ActivityIndicator size="small" color={theme.colors.card} />
             ) : (
-              <Text style={styles.buttonText}>Sign Out</Text>
+              <Text style={styles.buttonText}>{t('sign_out')}</Text>
             )}
           </TouchableOpacity>
         )}

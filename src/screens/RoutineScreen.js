@@ -4,8 +4,10 @@ import { getLatestAIRoutine, requestAIRoutine, getRoutineProgress, setRoutineSte
 import theme from '../styles/theme';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from '../i18n';
 
 const RoutineScreen = () => {
+  const { t } = useTranslation();
   const [routine, setRoutine] = useState(null);
   const [loading, setLoading] = useState(false);
   const [requesting, setRequesting] = useState(false);
@@ -21,7 +23,7 @@ const RoutineScreen = () => {
       setErrorMsg('');
       const { data, error } = await getLatestAIRoutine();
       if (error) {
-        setErrorMsg('Could not load your personalized routine.');
+        setErrorMsg(t('could_not_load_routine'));
         setRoutine(null);
       } else {
         setRoutine(data);
@@ -41,12 +43,12 @@ const RoutineScreen = () => {
             'lack of analytical data',
             'no specific observations',
             'no analysis',
-            'not analyzed',
+            t('not_analyzed'),
             'not available',
             'not enough information',
             'not enough data',
             'no images',
-            'images were not analyzed',
+            t('images_not_analyzed'),
             'analysis failed',
           ];
           failed = failureIndicators.some(indicator => routineText.includes(indicator));
@@ -56,7 +58,7 @@ const RoutineScreen = () => {
       setLoading(false);
     } catch (e) {
       console.error('fetchRoutine error:', e);
-      setErrorMsg('An unexpected error occurred while loading your routine.');
+      setErrorMsg(t('unexpected_error'));
       setRoutine(null);
       setLoading(false);
     }
@@ -81,7 +83,7 @@ const RoutineScreen = () => {
     setErrorMsg('');
     const { error } = await requestAIRoutine();
     if (error) {
-      setErrorMsg(error.message || 'Could not generate a new routine.');
+      setErrorMsg(error.message || t('could_not_generate_new_routine'));
     }
     await fetchRoutine(); // Always reload from Supabase
     setRequesting(false);
@@ -103,7 +105,7 @@ const RoutineScreen = () => {
           <Image source={require('../../assets/splash.png')} style={styles.bigLogo} />
         </View>
         <View style={styles.headerContainer}>
-          <Text style={styles.headerTitle}>Personalized Routine</Text>
+          <Text style={styles.headerTitle}>{t('personalized_routine')}</Text>
         </View>
         <View style={styles.buttonContainer}>
           <TouchableOpacity
@@ -111,7 +113,7 @@ const RoutineScreen = () => {
             onPress={handleRequestRoutine}
             disabled={requesting}
           >
-            <Text style={styles.requestButtonText}>{requesting ? 'Requesting...' : 'Request Personalized Routine'}</Text>
+            <Text style={styles.requestButtonText}>{requesting ? t('requesting') : t('request_personalized_routine')}</Text>
           </TouchableOpacity>
         </View>
         {loading || progressLoading ? (
@@ -122,7 +124,7 @@ const RoutineScreen = () => {
           </View>
         ) : analysisFailed ? (
           <View style={styles.errorBox}>
-            <Text style={styles.errorText}>Could not generate a routine. Please try again after a successful analysis.</Text>
+            <Text style={styles.errorText}>{t('could_not_generate_routine')}</Text>
           </View>
         ) : (() => {
           // --- DEBUG LOG ---
@@ -133,7 +135,7 @@ const RoutineScreen = () => {
           if (steps && steps.length > 0) {
             return (
               <View style={styles.routineBox}>
-                <Text style={styles.routineTitle}>{title || 'Routine'}</Text>
+                <Text style={styles.routineTitle}>{title || t('routine')}</Text>
                 {steps.map((step, idx) => (
                   <TouchableOpacity
                     key={idx}
@@ -158,7 +160,7 @@ const RoutineScreen = () => {
           } else {
             return (
               <View style={styles.infoBox}>
-                <Text style={styles.infoText}>No routine available. Please request a personalized routine.</Text>
+                <Text style={styles.infoText}>{t('no_routine_available')}</Text>
               </View>
             );
           }

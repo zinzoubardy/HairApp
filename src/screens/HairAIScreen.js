@@ -14,16 +14,27 @@ import {
 } from 'react-native';
 import { getAIHairstyleAdvice } from '../services/AIService';
 import theme from '../styles/theme';
+import { useTranslation } from '../i18n';
+import { I18nManager } from 'react-native';
 
 const HairAIScreen = () => {
+  const { t } = useTranslation();
   const [prompt, setPrompt] = useState('');
   const [response, setResponse] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  // Helper function to get text direction based on content
+  const getTextDirection = (text) => {
+    if (!text) return 'ltr';
+    // Check if text contains Arabic characters
+    const arabicRegex = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/;
+    return arabicRegex.test(text) ? 'rtl' : 'ltr';
+  };
+
   const handleGetAdvice = async () => {
     if (!prompt.trim()) {
-      Alert.alert("Validation Error", "Please enter a question or describe your hair concern.");
+      Alert.alert(t('validation_error'), t('validation_error'));
       return;
     }
     setLoading(true);
@@ -35,12 +46,12 @@ const HairAIScreen = () => {
         setResponse(result.data);
       } else {
         setError(result.error);
-        Alert.alert("AI Error", result.error || "Could not fetch advice.");
+        Alert.alert(t('ai_error'), result.error || t('ai_error'));
       }
     } catch (e) {
       const errorMessage = e.message || "An unexpected error occurred.";
       setError(errorMessage);
-      Alert.alert("System Error", errorMessage);
+      Alert.alert(t('system_error'), errorMessage);
     }
     setLoading(false);
   };
@@ -57,22 +68,23 @@ const HairAIScreen = () => {
       </View>
 
       <View style={styles.headerContainer}>
-        <Text style={styles.headerTitle}>AI Hair Advisor</Text>
+        <Text style={styles.headerTitle}>{t('ai_advisor')}</Text>
         <Text style={styles.headerSubtitle}>
-          Ask our AI for hairstyle advice, color suggestions, or product recommendations!
+          {t('ai_advisor_subtitle')}
         </Text>
       </View>
 
       <View style={styles.content}>
         <TextInput
-          style={styles.input}
-          placeholder="e.g., What hairstyle suits a round face with curly hair?"
+          style={[styles.input, { textAlign: getTextDirection(prompt) }]}
+          placeholder={t('enter_hair_question')}
           placeholderTextColor={theme.colors.textSecondary}
           value={prompt}
           onChangeText={setPrompt}
           multiline
           numberOfLines={4}
           editable={!loading}
+          textAlignVertical="top"
         />
 
         <TouchableOpacity
@@ -83,7 +95,7 @@ const HairAIScreen = () => {
           {loading ? (
             <ActivityIndicator color={theme.colors.textPrimary} />
           ) : (
-            <Text style={styles.buttonText}>Get Advice</Text>
+            <Text style={styles.buttonText}>{t('get_advice')}</Text>
           )}
         </TouchableOpacity>
 
@@ -95,8 +107,8 @@ const HairAIScreen = () => {
         
         {response && (
           <View style={styles.responseCard}>
-            <Text style={styles.responseTextLabel}>AI's Advice:</Text>
-            <Text style={styles.responseText}>{response}</Text>
+            <Text style={styles.responseTextLabel}>{t('ai_advice')}</Text>
+            <Text style={[styles.responseText, { textAlign: getTextDirection(response) }]}>{response}</Text>
           </View>
         )}
       </View>

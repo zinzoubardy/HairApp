@@ -14,6 +14,7 @@ import {
 import theme from "../styles/theme";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigation } from '@react-navigation/native';
+import { useTranslation } from '../i18n';
 
 const AuthScreen = () => {
   const { signUp, signIn, loadingAuthAction } = useAuth(); // Use the context
@@ -21,6 +22,7 @@ const AuthScreen = () => {
   const [password, setPassword] = useState("");
   const [isSignUpMode, setIsSignUpMode] = useState(false);
   const navigation = useNavigation();
+  const { t } = useTranslation();
 
   console.log('DEBUG: signIn from useAuth:', signIn, typeof signIn);
 
@@ -33,12 +35,12 @@ const AuthScreen = () => {
     console.log("signIn.toString():", signIn.toString());
     
     if (!email.trim() || !password.trim()) {
-      Alert.alert("Error", "Please fill in all fields");
+      Alert.alert(t('error'), t('fill_all_fields'));
       return;
     }
 
     if (typeof signIn !== 'function') {
-      Alert.alert('Critical Error', 'signIn is not a function. Please check AuthContext usage.');
+      Alert.alert(t('error'), 'signIn is not a function. Please check AuthContext usage.');
       return;
     }
 
@@ -47,7 +49,7 @@ const AuthScreen = () => {
       if (isSignUpMode) {
         console.log("Attempting sign up...");
         await signUp(email, password);
-        Alert.alert("Success", "Account created! Please check your email to verify your account.");
+        Alert.alert(t('success'), t('account_created'));
       } else {
         console.log("Attempting sign in...");
         console.log("About to call signIn with:", email, password);
@@ -64,7 +66,7 @@ const AuthScreen = () => {
       }
     } catch (error) {
       console.error("Auth error:", error);
-      Alert.alert("Error", error.message);
+      Alert.alert(t('error'), error.message);
     } finally {
       console.log("Auth action completed");
     }
@@ -84,7 +86,7 @@ const AuthScreen = () => {
           />
         </View>
         <Text style={styles.title}>
-          {isSignUpMode ? "Create Account" : "Welcome Back"}
+          {isSignUpMode ? t('create_account') : t('welcome_back')}
         </Text>
         <Text style={styles.subtitle}>
           {isSignUpMode ? "Join HairNature AI today!" : "Sign in to continue."}
@@ -94,7 +96,7 @@ const AuthScreen = () => {
           <View style={styles.inputContainer}>
             <TextInput
               style={styles.input}
-              placeholder="Email"
+              placeholder={t('email')}
               placeholderTextColor={theme.colors.textSecondary}
               value={email}
               onChangeText={setEmail}
@@ -107,7 +109,7 @@ const AuthScreen = () => {
           <View style={styles.inputContainer}>
             <TextInput
               style={styles.input}
-              placeholder="Password"
+              placeholder={t('password')}
               placeholderTextColor={theme.colors.textSecondary}
               value={password}
               onChangeText={setPassword}
@@ -130,7 +132,7 @@ const AuthScreen = () => {
               <ActivityIndicator size="small" color={theme.colors.textPrimary} />
             ) : (
               <Text style={styles.primaryButtonText}>
-                {isSignUpMode ? "Sign Up" : "Sign In"}
+                {isSignUpMode ? t('sign_up') : t('sign_in')}
               </Text>
             )}
           </TouchableOpacity>
@@ -158,7 +160,7 @@ const AuthScreen = () => {
               disabled={loadingAuthAction}
             >
               <Text style={styles.toggleButtonText}>
-                {isSignUpMode ? "Sign In" : "Sign Up"}
+                {isSignUpMode ? t('sign_in') : t('sign_up')}
               </Text>
             </TouchableOpacity>
           </View>
