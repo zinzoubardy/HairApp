@@ -43,6 +43,9 @@
       "ios",
       "android",
       "web"
+    ],
+    "plugins": [
+      "expo-localization"
     ]
   }
 }
