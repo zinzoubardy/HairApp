@@ -23,23 +23,49 @@ const AnalysisOptionsScreen = () => {
   });
 
   const pickImage = async (angle = null) => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: 'Images',
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
-
-    if (!result.canceled && result.assets[0]) {
-      if (angle) {
-        setUploadedImages(prev => ({
-          ...prev,
-          [angle]: result.assets[0].uri
-        }));
-      } else {
-        setSelectedImage(result.assets[0].uri);
-      }
-    }
+    Alert.alert(
+      t('upload_images'),
+      t('choose_image_source'),
+      [
+        {
+          text: t('take_photo'),
+          onPress: async () => {
+            const result = await ImagePicker.launchCameraAsync({
+              allowsEditing: true,
+              aspect: [1, 1],
+              quality: 0.8,
+            });
+            if (!result.canceled && result.assets && result.assets[0]) {
+              if (angle) {
+                setUploadedImages(prev => ({ ...prev, [angle]: result.assets[0].uri }));
+              } else {
+                setSelectedImage(result.assets[0].uri);
+              }
+            }
+          },
+        },
+        {
+          text: t('select_from_gallery'),
+          onPress: async () => {
+            const result = await ImagePicker.launchImageLibraryAsync({
+              mediaTypes: 'Images',
+              allowsEditing: true,
+              aspect: [1, 1],
+              quality: 0.8,
+            });
+            if (!result.canceled && result.assets && result.assets[0]) {
+              if (angle) {
+                setUploadedImages(prev => ({ ...prev, [angle]: result.assets[0].uri }));
+              } else {
+                setSelectedImage(result.assets[0].uri);
+              }
+            }
+          },
+        },
+        { text: t('cancel'), style: 'cancel' },
+      ],
+      { cancelable: true }
+    );
   };
 
   const handleGeneralAnalysis = async () => {

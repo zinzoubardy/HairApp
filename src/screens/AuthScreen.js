@@ -137,19 +137,6 @@ const AuthScreen = () => {
             )}
           </TouchableOpacity>
 
-          <View style={styles.dividerContainer}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>OR</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          <TouchableOpacity
-            style={styles.socialButton}
-            onPress={() => {}}
-          >
-            <Text style={styles.socialButtonText}>Sign In with Google</Text>
-          </TouchableOpacity>
-
           <View style={styles.toggleContainer}>
             <Text style={styles.toggleText}>
               {isSignUpMode ? "Already have an account? Sign In" : "Don't have an account? Sign Up"}

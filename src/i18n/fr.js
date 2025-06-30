@@ -79,6 +79,7 @@ export default {
   not_analyzed: "Non analysé",
   upload_images_for_analysis: "Téléchargez des images pour obtenir une analyse",
   images_not_analyzed: "les images n'ont pas été analysées",
+  analyzed: "Analysé",
   
   // Routine Screen
   personalized_routine: "Routine personnalisée",
@@ -143,4 +144,8 @@ export default {
   analysis_not_available: "Analyse non disponible",
   hair_health_score: "Score de santé des cheveux",
   failed_to_save_analysis: "Échec de la sauvegarde de l'analyse",
+  choose_image_source: "Choisissez la source de l'image",
+  cancel: "Annuler",
+  select_from_gallery: "Choisir depuis la galerie",
+  take_photo: "Prendre une photo",
 }; 

@@ -229,6 +229,10 @@ const ProfileScreen = ({ navigation }) => {
   const handleSignOut = async () => {
     try {
       await signOut();
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Splash' }],
+      });
     } catch (error) {
       Alert.alert(t('error'), error.message);
     }
@@ -239,57 +243,71 @@ const ProfileScreen = ({ navigation }) => {
       Alert.alert(t('not_logged_in'), "You must be logged in to upload images.");
       return;
     }
-
     setUploadingAngle(angle);
     try {
-      // Launch image picker
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: 'Images',
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-      });
-
-      if (!result.canceled && result.assets && result.assets[0]) {
-        const imageUri = result.assets[0].uri;
-        console.log(`Uploading ${angle} image:`, imageUri);
-
-        // Upload to Cloudinary
-        const { data, error } = await uploadProfileImage(user.id, imageUri, angle);
-        
-        if (!error) {
-          // Update the appropriate state based on angle
-          switch (angle) {
-            case "up":
-              setProfilePicUpUrl(data.publicUrl);
-              break;
-            case "right":
-              setProfilePicRightUrl(data.publicUrl);
-              break;
-            case "left":
-              setProfilePicLeftUrl(data.publicUrl);
-              break;
-            case "back":
-              setProfilePicBackUrl(data.publicUrl);
-              break;
-          }
-          
-          Alert.alert(t('success'), `${angle.charAt(0).toUpperCase() + angle.slice(1)} ${t('upload_success')}`);
-        } else {
-          console.error("Upload failed:", error);
-          const errorMessage = typeof error === 'string' ? error : error?.message || 'Unknown error';
-          if (typeof errorMessage === 'string' && (errorMessage.includes("network") || errorMessage.includes("connection"))) {
-            Alert.alert(t('error'), t('network_error'));
-          } else {
-            Alert.alert(t('error'), `${t('upload_exception')}: ${errorMessage}`);
-          }
-        }
-      }
+      // Ask user: Camera or Gallery?
+      Alert.alert(
+        t('upload_images'),
+        t('choose_image_source'),
+        [
+          {
+            text: t('take_photo'),
+            onPress: async () => {
+              const result = await ImagePicker.launchCameraAsync({
+                allowsEditing: true,
+                aspect: [1, 1],
+                quality: 0.8,
+              });
+              if (!result.canceled && result.assets && result.assets[0]) {
+                await uploadImageForAngle(result.assets[0].uri, angle);
+              }
+              setUploadingAngle(null);
+            },
+          },
+          {
+            text: t('select_from_gallery'),
+            onPress: async () => {
+              const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: 'Images',
+                allowsEditing: true,
+                aspect: [1, 1],
+                quality: 0.8,
+              });
+              if (!result.canceled && result.assets && result.assets[0]) {
+                await uploadImageForAngle(result.assets[0].uri, angle);
+              }
+              setUploadingAngle(null);
+            },
+          },
+          { text: t('cancel'), style: 'cancel', onPress: () => setUploadingAngle(null) },
+        ],
+        { cancelable: true }
+      );
     } catch (e) {
       console.error("Exception during image upload:", e);
       Alert.alert(t('error'), `${t('upload_exception')}: ${e.message}`);
-    } finally {
       setUploadingAngle(null);
+    }
+  };
+
+  // Helper to upload image for a given angle
+  const uploadImageForAngle = async (imageUri, angle) => {
+    const { data, error } = await uploadProfileImage(user.id, imageUri, angle);
+    if (!error) {
+      switch (angle) {
+        case "up": setProfilePicUpUrl(data.publicUrl); break;
+        case "right": setProfilePicRightUrl(data.publicUrl); break;
+        case "left": setProfilePicLeftUrl(data.publicUrl); break;
+        case "back": setProfilePicBackUrl(data.publicUrl); break;
+      }
+      Alert.alert(t('success'), `${angle.charAt(0).toUpperCase() + angle.slice(1)} ${t('upload_success')}`);
+    } else {
+      const errorMessage = typeof error === 'string' ? error : error?.message || 'Unknown error';
+      if (typeof errorMessage === 'string' && (errorMessage.includes("network") || errorMessage.includes("connection"))) {
+        Alert.alert(t('error'), t('network_error'));
+      } else {
+        Alert.alert(t('error'), `${t('upload_exception')}: ${errorMessage}`);
+      }
     }
   };
 

@@ -146,4 +146,8 @@ export default {
   hair_health_score: "درجة صحة الشعر",
   failed_to_save_analysis: "فشل في حفظ التحليل",
   analyzed: "تم التحليل",
+  choose_image_source: "اختر مصدر الصورة",
+  cancel: "إلغاء",
+  select_from_gallery: "اختيار من المعرض",
+  take_photo: "التقاط صورة",
 }; 

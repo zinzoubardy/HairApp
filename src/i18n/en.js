@@ -78,6 +78,7 @@ export default {
   not_analyzed: "Not Analyzed",
   upload_images_for_analysis: "Upload images to get analysis",
   images_not_analyzed: "images were not analyzed",
+  analyzed: "Analyzed",
   
   // Routine Screen
   personalized_routine: "Personalized Routine",

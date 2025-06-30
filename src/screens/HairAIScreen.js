@@ -11,6 +11,7 @@ import {
   Platform,
   KeyboardAvoidingView,
   Image,
+  ScrollView,
 } from 'react-native';
 import { getAIHairstyleAdvice } from '../services/AIService';
 import theme from '../styles/theme';
@@ -106,10 +107,12 @@ const HairAIScreen = () => {
         )}
         
         {response && (
-          <View style={styles.responseCard}>
-            <Text style={styles.responseTextLabel}>{t('ai_advice')}</Text>
-            <Text style={[styles.responseText, { textAlign: getTextDirection(response) }]}>{response}</Text>
-          </View>
+          <ScrollView style={{ maxHeight: 300, marginBottom: 20 }}>
+            <View style={styles.responseCard}>
+              <Text style={styles.responseTextLabel}>{t('ai_advice')}</Text>
+              <Text style={[styles.responseText, { textAlign: getTextDirection(response) }]}>{response}</Text>
+            </View>
+          </ScrollView>
         )}
       </View>
 

@@ -499,6 +499,9 @@ const HomeScreen = () => {
 
   const analysisData = getAnalysisData();
 
+  // Helper to check if user has uploaded all four images
+  const hasAllImages = profile && profile.profile_pic_up_url && profile.profile_pic_back_url && profile.profile_pic_left_url && profile.profile_pic_right_url;
+
   // If loading profile
   if (loading) {
     return (
@@ -552,6 +555,15 @@ const HomeScreen = () => {
                 <Text style={styles.globalPercent}>{analysisData.hairState}%</Text>
               </View>
             </View>
+            {/* Show Analyse Now button if missing images or no analysis */}
+            {(!hasAllImages || !analysis) && (
+              <TouchableOpacity
+                style={[styles.analyseButton, { marginTop: 24 }]}
+                onPress={() => navigation.navigate('AnalysisOptionsScreen', { preselect: 'dashboard' })}
+              >
+                <Text style={styles.analyseButtonText}>{t('analyse_now')}</Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           {/* Split Box */}

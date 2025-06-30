@@ -25,8 +25,8 @@ const SplashScreen = () => {
         await initializeI18n();
         const storedLang = await AsyncStorage.getItem('appLanguage');
         if (storedLang) {
-          setSelectedLanguage(storedLang);
-          setLanguageSelected(true);
+          setSelectedLanguage(storedLang); // Pre-select
+          i18n.locale = storedLang; // Set i18n locale
         }
         setIsI18nReady(true);
       } catch (error) {
@@ -48,7 +48,7 @@ const SplashScreen = () => {
         I18nManager.forceRTL(false);
       }
       setShowLanguageModal(false);
-      setLanguageSelected(true);
+      setLanguageSelected(true); // Show Get Started button after language is picked
       // Don't navigate - stay on splash page with translated content
     } catch (error) {
       console.log('Error selecting language:', error);
@@ -56,6 +56,7 @@ const SplashScreen = () => {
   };
 
   const handleGetStarted = () => {
+    setLanguageSelected(true); // Only set to true after user confirms
     navigation.navigate('Auth');
   };
 
@@ -71,18 +72,10 @@ const SplashScreen = () => {
 
   return (
     <View style={styles.container}>
-      {/* Globe Icon - Top Right */}
-      <TouchableOpacity 
-        style={styles.globeButton}
-        onPress={() => setShowLanguageModal(true)}
-      >
-        <Text style={styles.globeIcon}>🌍</Text>
-      </TouchableOpacity>
-
+      {/* Central Logo */}
       <View style={styles.centralLogoContainer}>
         <Image source={require('../../assets/splash.png')} style={styles.bigLogo} />
       </View>
-      
       <View style={styles.content}>
         <Text style={styles.title}>{t('welcome')}</Text>
         <Text style={styles.subtitle}>
@@ -91,15 +84,32 @@ const SplashScreen = () => {
             : t('choose_language_to_start')
           }
         </Text>
+        {/* Language selection icons below the question */}
+        {!languageSelected && (
+          <View style={styles.languageRow}>
+            {languages.map((language) => (
+              <TouchableOpacity
+                key={language.code}
+                style={[
+                  styles.languageOption,
+                  selectedLanguage === language.code && styles.selectedLanguage
+                ]}
+                onPress={() => handleLanguageSelect(language.code)}
+              >
+                <Text style={styles.languageText}>{language.name}</Text>
+                <Text style={styles.languageGlobe}>{'\u{1F310}'}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
       </View>
-
       {languageSelected && (
         <TouchableOpacity style={styles.getStartedButton} onPress={handleGetStarted}>
           <Text style={styles.getStartedText}>{t('get_started')}</Text>
         </TouchableOpacity>
       )}
-
-      {/* Minimal Language Selection Modal */}
+      {/* Remove the colored globe icon from the top right */}
+      {/* Minimal Language Selection Modal (keep for later language change) */}
       <Modal
         visible={showLanguageModal}
         transparent={true}
@@ -121,7 +131,7 @@ const SplashScreen = () => {
                 ]}
                 onPress={() => handleLanguageSelect(language.code)}
               >
-                <Text style={styles.languageFlag}>{language.flag}</Text>
+                <Text style={styles.languageGlobe}>{'\u{1F310}'}</Text>
                 <Text style={[
                   styles.languageText,
                   selectedLanguage === language.code && styles.selectedLanguageText
@@ -145,21 +155,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 60,
     paddingHorizontal: 40,
-  },
-  globeButton: {
-    position: 'absolute',
-    top: 60,
-    right: 30,
-    zIndex: 1000,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  globeIcon: {
-    fontSize: 28,
-    color: theme.colors.textPrimary,
   },
   centralLogoContainer: {
     alignItems: 'center',
@@ -245,10 +240,6 @@ const styles = StyleSheet.create({
   selectedLanguage: {
     backgroundColor: theme.colors.accent + '20',
   },
-  languageFlag: {
-    fontSize: 18,
-    marginRight: 8,
-  },
   languageText: {
     fontSize: 16,
     color: '#333',
@@ -257,6 +248,16 @@ const styles = StyleSheet.create({
   selectedLanguageText: {
     color: theme.colors.accent,
     fontWeight: 'bold',
+  },
+  languageRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  languageGlobe: {
+    fontSize: 20,
+    marginLeft: 8,
   },
 });
 
