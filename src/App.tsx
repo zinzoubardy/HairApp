@@ -7,6 +7,30 @@ import AppNavigator from "./navigation/AppNavigator";
 import theme from './styles/theme';
 import { initializeI18n } from './i18n';
 
+// Add linking config for deep linking
+const linking = {
+  prefixes: ['rootandglow://', 'https://rootandglow.com'],
+  config: {
+    screens: {
+      Splash: 'Splash',
+      Auth: 'Auth',
+      OnboardingCarousel: 'OnboardingCarousel',
+      MainTabs: {
+        screens: {
+          Dashboard: 'dashboard',
+          Routines: 'routines',
+          Analyse: 'analyse',
+          AIAdvisor: 'ai_advisor',
+          Profile: 'profile',
+        },
+      },
+      Upload: 'upload',
+      AnalysisResult: 'analysis-result',
+      PrivacyPolicy: 'privacy-policy',
+    },
+  },
+};
+
 function Root() {
   const { user, loadingInitial } = useAuth() || { user: null, loadingInitial: false };
   const [languageReady, setLanguageReady] = useState(false);
@@ -35,7 +59,7 @@ function Root() {
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer linking={linking} fallback={null}>
       <AppNavigator />
     </NavigationContainer>
   );

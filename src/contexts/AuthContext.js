@@ -50,41 +50,32 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const signIn = async (email, password) => {
-    console.log("AuthContext: signIn called with email:", email);
-    console.log("AuthContext: This is the REAL signIn function from AuthContext");
-    console.log("AuthContext: About to set loadingAuthAction to true");
     setLoadingAuthAction(true);
     try {
-      console.log("AuthContext: Calling supabase.auth.signInWithPassword...");
+      console.log('AuthContext: signIn called with email:', email);
+      console.log('AuthContext: This is the REAL signIn function from AuthContext');
+      console.log('AuthContext: About to set loadingAuthAction to true');
+      console.log('AuthContext: Calling supabase.auth.signInWithPassword...');
+      console.log('AuthContext: Waiting for supabase response...');
       
-      // Add a timeout to prevent hanging
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Authentication timeout')), 10000); // 10 second timeout
-      });
-      
-      const authPromise = supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       
-      console.log("AuthContext: Waiting for supabase response...");
-      const { data, error } = await Promise.race([authPromise, timeoutPromise]);
+      console.log('AuthContext: Supabase response received');
+      console.log('AuthContext: data:', data);
+      console.log('AuthContext: error:', error);
       
-      console.log("AuthContext: Supabase response received");
-      console.log("AuthContext: data:", data);
-      console.log("AuthContext: error:", error);
+      if (error) throw error;
       
-      if (error) {
-        console.log("AuthContext: Throwing error:", error.message);
-        throw error;
-      }
-      console.log("AuthContext: Sign in successful");
+      console.log('AuthContext: Sign in successful');
       // Navigation will be handled by the navigation stack
     } catch (error) {
-      console.error("AuthContext: Sign in error:", error.message);
+      console.error("Sign in error:", error.message);
       throw error;
     } finally {
-      console.log("AuthContext: Setting loadingAuthAction to false");
+      console.log('AuthContext: Setting loadingAuthAction to false');
       setLoadingAuthAction(false);
     }
   };

@@ -5,13 +5,16 @@ import theme from '../styles/theme';
 import i18n, { setAppLanguage, loadAppLanguage, initializeI18n } from '../i18n';
 import { I18nManager } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from '../contexts/AuthContext';
 
 const SplashScreen = () => {
   const navigation = useNavigation();
+  const { user } = useAuth();
   const [isI18nReady, setIsI18nReady] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState('en');
   const [showLanguageModal, setShowLanguageModal] = useState(false);
   const [languageSelected, setLanguageSelected] = useState(false);
+  const [onboardingComplete, setOnboardingComplete] = useState(false);
 
   const languages = [
     { code: 'en', name: 'ENG', flag: '🇺🇸' },
@@ -22,13 +25,18 @@ const SplashScreen = () => {
   useEffect(() => {
     const initI18n = async () => {
       try {
+        console.log('SplashScreen: Starting i18n initialization');
         await initializeI18n();
         const storedLang = await AsyncStorage.getItem('appLanguage');
         if (storedLang) {
           setSelectedLanguage(storedLang); // Pre-select
           i18n.locale = storedLang; // Set i18n locale
+          console.log('SplashScreen: Found stored language:', storedLang);
+        } else {
+          console.log('SplashScreen: No stored language found');
         }
         setIsI18nReady(true);
+        console.log('SplashScreen: i18n initialization complete, isI18nReady set to true');
       } catch (error) {
         console.log('Error initializing i18n:', error);
         setIsI18nReady(true);
@@ -37,6 +45,60 @@ const SplashScreen = () => {
     
     initI18n();
   }, []);
+
+  // Check onboarding status when user changes
+  useEffect(() => {
+    const checkOnboarding = async () => {
+      if (user) {
+        const flag = await AsyncStorage.getItem('onboardingComplete');
+        setOnboardingComplete(flag === 'true');
+      } else {
+        // User is signed out - reset language selection so they can choose again
+        setLanguageSelected(false);
+        setOnboardingComplete(false);
+      }
+    };
+    checkOnboarding();
+  }, [user]);
+
+  // Auto-navigate based on user state and onboarding
+  useEffect(() => {
+    console.log('SplashScreen navigation useEffect triggered:', {
+      isI18nReady,
+      languageSelected,
+      user: !!user,
+      onboardingComplete,
+      userEmail: user?.email
+    });
+    
+    if (isI18nReady) {
+      const timer = setTimeout(() => {
+        console.log('SplashScreen navigation timer fired:', {
+          user: !!user,
+          onboardingComplete,
+          userEmail: user?.email
+        });
+        
+        if (user) {
+          // User is signed in - navigate immediately
+          if (onboardingComplete) {
+            console.log('Navigating to MainTabs');
+            navigation.replace('MainTabs');
+          } else {
+            console.log('Navigating to OnboardingCarousel');
+            navigation.replace('OnboardingCarousel');
+          }
+        } else if (languageSelected) {
+          // User is not signed in but has selected language
+          console.log('Navigating to Auth');
+          navigation.replace('Auth');
+        }
+        // If user is not signed in and hasn't selected language, stay on splash
+      }, 1000); // Show splash for 1 second before navigating
+
+      return () => clearTimeout(timer);
+    }
+  }, [isI18nReady, languageSelected, user, onboardingComplete, navigation]);
 
   const handleLanguageSelect = async (lang) => {
     try {
@@ -57,7 +119,7 @@ const SplashScreen = () => {
 
   const handleGetStarted = () => {
     setLanguageSelected(true); // Only set to true after user confirms
-    navigation.navigate('Auth');
+    // Navigation will be handled by the useEffect above
   };
 
   // Safe translation function with fallback

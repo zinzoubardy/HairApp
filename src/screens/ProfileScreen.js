@@ -229,6 +229,7 @@ const ProfileScreen = ({ navigation }) => {
   const handleSignOut = async () => {
     try {
       await signOut();
+      // Force navigation to Splash screen so user can choose language again
       navigation.reset({
         index: 0,
         routes: [{ name: 'Splash' }],

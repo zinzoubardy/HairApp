@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -9,12 +9,14 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
-  Image
+  Image,
+  ScrollView
 } from "react-native";
 import theme from "../styles/theme";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigation } from '@react-navigation/native';
 import { useTranslation } from '../i18n';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const AuthScreen = () => {
   const { signUp, signIn, loadingAuthAction } = useAuth(); // Use the context
@@ -23,20 +25,53 @@ const AuthScreen = () => {
   const [isSignUpMode, setIsSignUpMode] = useState(false);
   const navigation = useNavigation();
   const { t } = useTranslation();
+  const [onboardingComplete, setOnboardingComplete] = useState(false);
+
+  // Check onboarding status when component mounts
+  useEffect(() => {
+    const checkOnboarding = async () => {
+      try {
+        const flag = await AsyncStorage.getItem('onboardingComplete');
+        setOnboardingComplete(flag === 'true');
+      } catch (error) {
+        console.log('Error checking onboarding status:', error);
+      }
+    };
+    checkOnboarding();
+  }, []);
+
+  // Auto-navigate after successful authentication
+  useEffect(() => {
+    const checkUserAndNavigate = async () => {
+      try {
+        const user = await AsyncStorage.getItem('user');
+        if (user) {
+          const userData = JSON.parse(user);
+          const onboardingFlag = await AsyncStorage.getItem('onboardingComplete');
+          const isOnboardingComplete = onboardingFlag === 'true';
+          
+          if (isOnboardingComplete) {
+            navigation.replace('MainTabs');
+          } else {
+            navigation.replace('OnboardingCarousel');
+          }
+        }
+      } catch (error) {
+        console.log('Error checking user and navigating:', error);
+      }
+    };
+    
+    checkUserAndNavigate();
+  }, [navigation]);
 
   console.log('DEBUG: signIn from useAuth:', signIn, typeof signIn);
 
   const handleAuthAction = async () => {
-    console.log('handleAuthAction called');
-    console.log('Email:', email);
-    console.log('Password length:', password.length);
-    console.log('isSignUpMode:', isSignUpMode);
-    console.log('signIn function:', signIn);
-    console.log('signIn.toString():', signIn.toString());
     if (!email || !password) {
-      Alert.alert(t('fill_all_fields'));
+      Alert.alert(t('error'), t('please_fill_all_fields'));
       return;
     }
+
     try {
       if (isSignUpMode) {
         console.log('Attempting sign up...');
@@ -45,9 +80,19 @@ const AuthScreen = () => {
       } else {
         console.log('Attempting sign in...');
         await signIn(email, password);
+        
+        // Check onboarding status and navigate accordingly
+        const onboardingFlag = await AsyncStorage.getItem('onboardingComplete');
+        const isOnboardingComplete = onboardingFlag === 'true';
+        
+        if (isOnboardingComplete) {
+          navigation.replace('MainTabs');
+        } else {
+          navigation.replace('OnboardingCarousel');
+        }
       }
     } catch (error) {
-      Alert.alert(t('error'), error.message || t('system_error'));
+      Alert.alert(t('error'), error.message);
     }
   };
 
