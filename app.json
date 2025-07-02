@@ -46,6 +46,7 @@
     ],
     "plugins": [
       "expo-localization"
-    ]
+    ],
+    "scheme": "rootandglow"
   }
 }

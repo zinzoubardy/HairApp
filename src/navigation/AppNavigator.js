@@ -8,6 +8,7 @@ import i18n from "../i18n";
 import OnboardingCarouselScreen from '../screens/OnboardingCarouselScreen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
+import { NavigationContainer } from '@react-navigation/native';
 
 import HomeScreen from "../screens/HomeScreen"; // Will be the new Dashboard
 import UploadScreen from "../screens/UploadScreen";
@@ -159,6 +160,30 @@ const t = (key) => {
   }
 };
 
+// Add linking config for deep linking
+const linking = {
+  prefixes: ['rootandglow://', 'https://rootandglow.com'],
+  config: {
+    screens: {
+      Splash: 'Splash',
+      Auth: 'Auth',
+      OnboardingCarousel: 'OnboardingCarousel',
+      MainTabs: {
+        screens: {
+          Dashboard: 'dashboard',
+          Routines: 'routines',
+          Analyse: 'analyse',
+          AIAdvisor: 'ai_advisor',
+          Profile: 'profile',
+        },
+      },
+      Upload: 'upload',
+      AnalysisResult: 'analysis-result',
+      PrivacyPolicy: 'privacy-policy',
+    },
+  },
+};
+
 // The AppNavigator now includes the MainTabNavigator and other screens outside the tabs (like modal forms)
 // The Auth flow (handled in App.tsx) will navigate to "MainApp" stack which contains MainTabNavigator.
 const AppNavigator = () => {
@@ -198,54 +223,56 @@ const AppNavigator = () => {
   console.log('AppNavigator: user', user, 'onboardingComplete', onboardingComplete, 'initialRoute', initialRoute);
 
   return (
-    <Stack.Navigator 
-      screenOptions={defaultStackScreenOptions}
-      initialRouteName={initialRoute}
-    >
-      <Stack.Screen
-        name="Splash"
-        component={SplashScreen}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        name="Auth"
-        component={AuthScreen}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        name="OnboardingCarousel"
-        component={OnboardingCarouselScreen}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        name="MainTabs"
-        component={MainTabNavigator}
-        options={{ headerShown: false }}
-      />
-      {/* Screens that can be navigated to from within tabs but are not tabs themselves */}
-      <Stack.Screen
-        name="Profile"
-        component={ProfileScreen}
-        options={{ title: "My Profile" }} // Header will be shown for these
-      />
-       <Stack.Screen
-        name="Upload" // Kept for potential direct access or future use
-        component={UploadScreen}
-        options={{ title: "Upload Photo" }}
-      />
-      <Stack.Screen
-        name="AnalysisResult" // This screen might be deprecated if Home becomes the dashboard
-        component={AnalysisResultScreen}
-        options={{ title: "Analysis Result" }}
-      />
-      <Stack.Screen
-        name="AnalysisOptionsScreen"
-        component={AnalysisOptionsScreen}
-        options={{ title: "Hair Analysis Options" }}
-      />
-      <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} options={{ headerShown: true, title: 'Privacy Policy & Terms' }} />
-      {/* Add other full-screen modals or navigation flows here if needed */}
-    </Stack.Navigator>
+    <NavigationContainer linking={linking} fallback={null}>
+      <Stack.Navigator 
+        screenOptions={defaultStackScreenOptions}
+        initialRouteName={initialRoute}
+      >
+        <Stack.Screen
+          name="Splash"
+          component={SplashScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Auth"
+          component={AuthScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="OnboardingCarousel"
+          component={OnboardingCarouselScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="MainTabs"
+          component={MainTabNavigator}
+          options={{ headerShown: false }}
+        />
+        {/* Screens that can be navigated to from within tabs but are not tabs themselves */}
+        <Stack.Screen
+          name="Profile"
+          component={ProfileScreen}
+          options={{ title: "My Profile" }} // Header will be shown for these
+        />
+         <Stack.Screen
+          name="Upload" // Kept for potential direct access or future use
+          component={UploadScreen}
+          options={{ title: "Upload Photo" }}
+        />
+        <Stack.Screen
+          name="AnalysisResult" // This screen might be deprecated if Home becomes the dashboard
+          component={AnalysisResultScreen}
+          options={{ title: "Analysis Result" }}
+        />
+        <Stack.Screen
+          name="AnalysisOptionsScreen"
+          component={AnalysisOptionsScreen}
+          options={{ title: "Hair Analysis Options" }}
+        />
+        <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} options={{ headerShown: true, title: 'Privacy Policy & Terms' }} />
+        {/* Add other full-screen modals or navigation flows here if needed */}
+      </Stack.Navigator>
+    </NavigationContainer>
   );
 };
 
