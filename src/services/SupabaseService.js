@@ -415,3 +415,17 @@ export const setRoutineStepChecked = async (routineId, stepIndex, checked) => {
       updated_at: new Date().toISOString(),
     }, { onConflict: ['user_id', 'routine_id', 'step_index'] });
 };
+
+export const getHairAnalysisById = async (analysisId) => {
+  if (!analysisId) return { data: null, error: { message: "Analysis ID is required." } };
+  try {
+    const { data, error } = await supabase
+      .from("hair_analysis_results")
+      .select("*")
+      .eq("id", analysisId)
+      .single();
+    return { data, error };
+  } catch (e) {
+    return { data: null, error: { message: e.message || "Error fetching analysis by ID." } };
+  }
+};

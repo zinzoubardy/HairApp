@@ -236,44 +236,14 @@ const HomeScreen = () => {
 
     // Parse the text-based AI response
     const parseAnalysisText = (text) => {
-      // Detect analysis failure
-      const lowerText = text.toLowerCase();
+      // Detect analysis failure (stricter: only if the whole response matches a known failure message)
       const failureIndicators = [
-        'unable to analyze',
-        'technical issues',
-        'cannot provide',
-        'no data',
-        'general advice',
-        'not tailored',
-        'without the ability to analyze',
-        'lack of analytical data',
-        'no specific observations',
-        'no analysis',
-        t('not_analyzed'),
-        'not available',
-        'not enough information',
-        'not enough data',
-        'no images',
-        t('images_not_analyzed'),
-        'analysis failed',
+        'unable to analyze', 'technical issues', 'cannot provide', 'no data', 'general advice', 'not tailored', 'without the ability to analyze', 'lack of analytical data', 'no specific observations', 'no analysis', t('not_analyzed'), 'not available', 'not enough information', 'not enough data', 'no images', t('images_not_analyzed'), 'analysis failed',
         // Arabic failure indicators
-        'لا يمكن تحليل',
-        'مشاكل تقنية',
-        'لا يمكن تقديم',
-        'لا توجد بيانات',
-        'نصائح عامة',
-        'غير مخصص',
-        'بدون القدرة على التحليل',
-        'نقص في البيانات التحليلية',
-        'لا توجد ملاحظات محددة',
-        'لا يوجد تحليل',
-        'غير متاح',
-        'لا توجد معلومات كافية',
-        'لا توجد بيانات كافية',
-        'لا توجد صور',
-        'فشل التحليل'
+        'لا يمكن تحليل', 'مشاكل تقنية', 'لا يمكن تقديم', 'لا توجد بيانات', 'نصائح عامة', 'غير مخصص', 'بدون القدرة على التحليل', 'نقص في البيانات التحليلية', 'لا توجد ملاحظات محددة', 'لا يوجد تحليل', 'غير متاح', 'لا توجد معلومات كافية', 'لا توجد بيانات كافية', 'لا توجد صور', 'فشل التحليل'
       ];
-      const analysisFailed = failureIndicators.some(indicator => lowerText.includes(indicator));
+      const normalizedText = text.toLowerCase().replace(/[\s\n\r]+/g, ' ').trim();
+      const analysisFailed = failureIndicators.some(indicator => normalizedText === indicator.toLowerCase());
 
       console.log('=== PARSING DEBUG START ===');
       console.log('Raw text to parse:', text);
@@ -313,8 +283,8 @@ const HomeScreen = () => {
 
         // Extract scalp analysis - handle both English and Arabic
         const scalpPatterns = [
-          /Detailed Scalp Analysis:\s*([^*]+?)(?=\*\*|$)/is,
-          /تحليل مفصل لفروة الرأس:\s*([^*]+?)(?=\*\*|$)/is
+          /تحليل\s*مفصل\s*لفروة\s*الرأس[:：\-\s]*([^*]+?)(?=\*\*|$)/is,
+          /Detailed Scalp Analysis[:：\-\s]*([^*]+?)(?=\*\*|$)/is
         ];
         
         for (const pattern of scalpPatterns) {
@@ -332,8 +302,8 @@ const HomeScreen = () => {
 
         // Extract color analysis - handle both English and Arabic
         const colorPatterns = [
-          /[*'"\s]*Color Analysis:([\s\S]*?)(?=[*'"\s]+(?:Recommendations:|\*+|$))/i,
-          /[*'"\s]*تحليل مفصل للون:([\s\S]*?)(?=[*'"\s]+(?:التوصيات:|\*+|$))/i
+          /تحليل\s*مفصل\s*للون[:：\-\s]*([\s\S]*?)(?=[*'"\s]+(?:التوصيات:|\*+|$))/i,
+          /Color Analysis[:：\-\s]*([\s\S]*?)(?=[*'"\s]+(?:Recommendations:|\*+|$))/i
         ];
         
         console.log('Trying to extract color analysis...');
@@ -455,8 +425,8 @@ const HomeScreen = () => {
 
         // Extract recommendations - handle both English and Arabic
         const recommendationsPatterns = [
-          /[*'"\s]*Recommendations:([\s\S]*?)(?=\n[*'"\s]*\*\*|$)/i,
-          /[*'"\s]*التوصيات:([\s\S]*?)(?=\n[*'"\s]*\*\*|$)/i
+          /التوصيات[:：\-\s]*([\s\S]*?)(?=\n[*'"\s]*\*\*|$)/i,
+          /Recommendations[:：\-\s]*([\s\S]*?)(?=\n[*'"\s]*\*\*|$)/i
         ];
         
         console.log('Trying to extract recommendations...');
@@ -602,8 +572,8 @@ const HomeScreen = () => {
             <View style={styles.recommendList}>
               {analysisData.recommendations.map((rec, idx) => (
                 <View key={idx} style={styles.recommendItem}>
-                  <FontAwesome5 name={rec.icon} size={22} color={theme.colors.accent} style={{ marginRight: 12 }} />
-                  <Text style={[styles.recommendText, { textAlign: getTextDirection(rec.text) }]}>{rec.text}</Text>
+                  <FontAwesome5 name={rec.icon || 'lightbulb'} size={22} color={theme.colors.accent} style={{ marginRight: 12 }} />
+                  <Text style={styles.recommendText}>{rec.text}</Text>
                 </View>
               ))}
             </View>
@@ -798,8 +768,8 @@ const HomeScreen = () => {
           <View style={styles.recommendList}>
             {analysisData.recommendations.map((rec, idx) => (
               <View key={idx} style={styles.recommendItem}>
-                <FontAwesome5 name={rec.icon} size={22} color={theme.colors.accent} style={{ marginRight: 12 }} />
-                <Text style={[styles.recommendText, { textAlign: getTextDirection(rec.text) }]}>{rec.text}</Text>
+                <FontAwesome5 name={rec.icon || 'lightbulb'} size={22} color={theme.colors.accent} style={{ marginRight: 12 }} />
+                <Text style={styles.recommendText}>{rec.text}</Text>
               </View>
             ))}
           </View>

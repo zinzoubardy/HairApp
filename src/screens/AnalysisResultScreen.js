@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import theme from '../styles/theme';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useTranslation } from '../i18n';
-import { getHairAnalysisResult } from '../services/SupabaseService';
+import { getHairAnalysisById } from '../services/SupabaseService';
 
 const AnalysisResultScreen = () => {
   const navigation = useNavigation();
@@ -26,7 +26,7 @@ const AnalysisResultScreen = () => {
   const fetchAnalysisData = async () => {
     setLoading(true);
     try {
-      const { data } = await getHairAnalysisResult(analysisId);
+      const { data } = await getHairAnalysisById(analysisId);
       if (data) {
         setAnalysisData(data);
       }
@@ -58,47 +58,41 @@ const AnalysisResultScreen = () => {
         }
       }
 
-      // Extract color analysis - handle both English and Arabic
+      // Extract color details
       const colorPatterns = [
-        /Color Analysis:\s*([^*]+?)(?=\*\*|$)/is,
-        /تحليل مفصل للون:\s*([^*]+?)(?=\*\*|$)/is
+        /Detailed Color Analysis[:：\-\s]*([\s\S]*?)(?=\*\*|$)/i,
+        /Color Analysis[:：\-\s]*([\s\S]*?)(?=\*\*|$)/i
       ];
-      
       let colorInfo = null;
       for (const pattern of colorPatterns) {
         const match = text.match(pattern);
         if (match && match[1]) {
           const colorContent = match[1].trim();
-          
-          // Try to extract color information
-          const colorDetectionPatterns = [
-            /(?:اللون المكتشف:\s*([^,\n]+))/i,
-            /(?:رمز اللون السداسي:\s*#([A-Fa-f0-9]{6}))/i,
-            /(?:detected\s+color[:\s]+([^,\n]+))/i,
-            /(?:hex\s+code[:\s]*#([A-Fa-f0-9]{6}))/i
-          ];
-          
-          let detectedColor = null;
-          let colorHex = null;
-          
-          for (const colorPattern of colorDetectionPatterns) {
-            const colorMatch = colorContent.match(colorPattern);
-            if (colorMatch && colorMatch[1]) {
-              if (colorPattern.toString().includes('hex') || colorPattern.toString().includes('رمز')) {
-                colorHex = '#' + colorMatch[1];
-              } else {
-                detectedColor = colorMatch[1].trim();
-              }
-            }
-          }
-          
-          if (detectedColor || colorHex) {
-            colorInfo = {
-              detectedColor: detectedColor || 'Analyzed',
-              colorHex: colorHex || '#FF3737',
-              summary: detectedColor ? `Detected: ${detectedColor}` : 'Color analysis completed'
-            };
-          }
+          // Extract detected color
+          const detectedColorMatch = colorContent.match(/Detected Color[:：\-\s]*([^\n]+)/i);
+          const colorReferenceMatch = colorContent.match(/Color Reference[:：\-\s]*([^\n]+)/i);
+          const hexMatch = colorContent.match(/Hex Code[:：\-\s]*([^\n]+)/i);
+          const summaryMatch = colorContent.match(/Summary[:：\-\s]*([^\n]+)/i);
+          colorInfo = {
+            detectedColor: detectedColorMatch ? detectedColorMatch[1].trim() : '',
+            colorReference: colorReferenceMatch ? colorReferenceMatch[1].trim() : '',
+            colorHex: hexMatch ? hexMatch[1].split('and')[0].trim() : '',
+            summary: summaryMatch ? summaryMatch[1].trim() : '',
+          };
+          break;
+        }
+      }
+
+      // Extract scalp details
+      const scalpPatterns = [
+        /Detailed Scalp Analysis[:：\-\s]*([\s\S]*?)(?=\*\*|$)/i,
+        /تحليل\s*مفصل\s*لفروة\s*الرأس[:：\-\s]*([\s\S]*?)(?=\*\*|$)/i
+      ];
+      let scalpInfo = '';
+      for (const pattern of scalpPatterns) {
+        const match = text.match(pattern);
+        if (match && match[1]) {
+          scalpInfo = match[1].trim();
           break;
         }
       }
@@ -106,6 +100,7 @@ const AnalysisResultScreen = () => {
       return {
         hairState,
         colorInfo,
+        scalpInfo,
         fullText: text
       };
     } catch (error) {
@@ -132,13 +127,53 @@ const AnalysisResultScreen = () => {
         answer: analysisData.analysis_data?.ai_response || t('analysis_not_available'),
         imageUrl: analysisData.image_url,
         colorAnalysis: parsed?.colorInfo,
-        hairState: parsed?.hairState
+        hairState: parsed?.hairState,
+        scalpInfo: parsed?.scalpInfo
       };
     }
     return null;
   };
 
   const content = getAnalysisContent();
+
+  // Recommendations icon mapping
+  const iconMap = {
+    'shampoo': 'bottle-shampoo',
+    'scissors': 'content-cut',
+    'cream': 'bottle-tonic',
+    'serum': 'bottle-tonic-plus',
+    'heat': 'hair-dryer',
+    'vitamins': 'pill',
+    'shower': 'shower',
+    'hair_mask': 'face-woman-shimmer',
+    'soap': 'soap',
+    'doctor': 'doctor',
+    'oil_bottle': 'bottle-tonic',
+    'default': 'lightbulb',
+  };
+
+  const emojiToIconMap = {
+    '💧': { name: 'tint', lib: 'FontAwesome5' },
+    '⚠️': { name: 'alert', lib: 'MaterialCommunityIcons' },
+    '✂️': { name: 'content-cut', lib: 'MaterialCommunityIcons' },
+    '🌿': { name: 'leaf', lib: 'FontAwesome5' },
+    '💆‍♂️': { name: 'account-heart', lib: 'MaterialCommunityIcons' },
+    // ...add more as needed
+  };
+
+  const arabicIconMap = {
+    'شامبو': { name: 'bottle-shampoo', lib: 'MaterialCommunityIcons' },
+    'مجفف': { name: 'hair-dryer', lib: 'MaterialCommunityIcons' },
+    'مجفف الشعر': { name: 'hair-dryer', lib: 'MaterialCommunityIcons' },
+    'فاكهة': { name: 'food-apple', lib: 'MaterialCommunityIcons' },
+    'قناع': { name: 'face-woman-shimmer', lib: 'MaterialCommunityIcons' },
+    'قناع الشعر': { name: 'face-woman-shimmer', lib: 'MaterialCommunityIcons' },
+    'منتجات': { name: 'flask', lib: 'MaterialCommunityIcons' },
+    'منتجات كيميائية': { name: 'flask', lib: 'MaterialCommunityIcons' },
+  };
+
+  // Helper: check if a string is an emoji
+  const isEmoji = (str) => /[\u{1F300}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u.test(str);
 
   if (loading) {
     return (
@@ -209,12 +244,68 @@ const AnalysisResultScreen = () => {
           </View>
 
           {/* Color Analysis & Preview */}
-          {content.colorAnalysis && content.colorAnalysis.colorHex && (
+          {content.colorAnalysis && (
             <View style={styles.colorPreviewSection}>
               <Text style={styles.colorPreviewLabel}>{t('analyzed_color')}</Text>
-              <View style={[styles.colorSwatch, { backgroundColor: content.colorAnalysis.colorHex }]} />
+              {content.colorAnalysis.colorHex && (
+                <View style={[styles.colorSwatch, { backgroundColor: content.colorAnalysis.colorHex }]} />
+              )}
               <Text style={styles.colorReferenceText}>{content.colorAnalysis.detectedColor}</Text>
+              <Text style={styles.colorSummaryText}>{content.colorAnalysis.colorReference}</Text>
               <Text style={styles.colorSummaryText}>{content.colorAnalysis.summary}</Text>
+            </View>
+          )}
+
+          {/* Scalp Analysis */}
+          {content.scalpInfo && (
+            <View style={styles.colorPreviewSection}>
+              <Text style={styles.colorPreviewLabel}>{t('scalp_analysis')}</Text>
+              <Text style={styles.colorSummaryText}>{content.scalpInfo}</Text>
+            </View>
+          )}
+
+          {/* Recommendations */}
+          {content.recommendations && content.recommendations.length > 0 && (
+            <View style={styles.recommendBox}>
+              <Text style={styles.recommendTitle}>{t('recommendations')}</Text>
+              <View style={styles.recommendList}>
+                {content.recommendations.map((rec, idx) => {
+                  let iconHint = rec.icon || 'default';
+                  let recText = rec.text || rec;
+                  // Remove IconHint and extract value (for all languages)
+                  recText = recText.replace(/IconHint[:：]?\s*([\w\u0600-\u06FF-\u1F300-\u1F6FF]+)/gi, '').trim();
+                  // Remove 'Recommendation:', 'توصية:', and variants
+                  recText = recText.replace(/^(\*\*?Recommendation:?\*\*?|Recommendation:?|توصية:?)/i, '').trim();
+                  if (!recText) return null;
+                  // Render emoji as text, else use icon library (Arabic or English)
+                  let iconElement = null;
+                  if (isEmoji(iconHint)) {
+                    iconElement = <Text style={{ fontSize: 22, marginRight: 12 }}>{iconHint}</Text>;
+                  } else if (arabicIconMap[iconHint]) {
+                    const { name, lib } = arabicIconMap[iconHint];
+                    if (lib === 'MaterialCommunityIcons') {
+                      iconElement = <MaterialCommunityIcons name={name} size={22} color={theme.colors.accent} style={{ marginRight: 12 }} />;
+                    } else if (lib === 'FontAwesome5') {
+                      iconElement = <FontAwesome5 name={name} size={22} color={theme.colors.accent} style={{ marginRight: 12 }} />;
+                    }
+                  } else if (emojiToIconMap[iconHint]) {
+                    const { name, lib } = emojiToIconMap[iconHint];
+                    if (lib === 'FontAwesome5') {
+                      iconElement = <FontAwesome5 name={name} size={22} color={theme.colors.accent} style={{ marginRight: 12 }} />;
+                    } else if (lib === 'MaterialCommunityIcons') {
+                      iconElement = <MaterialCommunityIcons name={name} size={22} color={theme.colors.accent} style={{ marginRight: 12 }} />;
+                    }
+                  } else {
+                    iconElement = <MaterialCommunityIcons name={iconMap[iconHint] || iconMap['default']} size={22} color={theme.colors.accent} style={{ marginRight: 12 }} />;
+                  }
+                  return (
+                    <View key={idx} style={styles.recommendItem}>
+                      {iconElement}
+                      <Text style={styles.recommendText}>{recText}</Text>
+                    </View>
+                  );
+                })}
+              </View>
             </View>
           )}
 
@@ -492,6 +583,37 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: theme.colors.primary,
     fontFamily: theme.fonts.title,
+  },
+  recommendBox: {
+    marginTop: 24,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.lg,
+    padding: 16,
+    ...theme.shadows.soft,
+    borderWidth: 1,
+    borderColor: theme.colors.accentGlow,
+  },
+  recommendTitle: {
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.primary,
+    fontFamily: theme.fonts.title,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  recommendList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  recommendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  recommendText: {
+    fontSize: theme.fontSizes.body,
+    color: theme.colors.textPrimary,
+    fontFamily: theme.fonts.body,
   },
 });
 

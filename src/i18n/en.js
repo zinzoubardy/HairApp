@@ -145,4 +145,8 @@ export default {
   hair_health_score: "Hair Health Score",
   failed_to_save_analysis: "Failed to save analysis",
   ai_advisor_subtitle: "Ask our AI for hairstyle advice, color suggestions, or product recommendations!",
+  choose_image_source: "Choose image source",
+  cancel: "Cancel",
+  select_from_gallery: "Select from gallery",
+  take_photo: "Take photo",
 }; 
