@@ -27,48 +27,26 @@ const AuthScreen = () => {
   console.log('DEBUG: signIn from useAuth:', signIn, typeof signIn);
 
   const handleAuthAction = async () => {
-    console.log("handleAuthAction called");
-    console.log("Email:", email);
-    console.log("Password length:", password.length);
-    console.log("isSignUpMode:", isSignUpMode);
-    console.log("signIn function:", signIn);
-    console.log("signIn.toString():", signIn.toString());
-    
-    if (!email.trim() || !password.trim()) {
-      Alert.alert(t('error'), t('fill_all_fields'));
+    console.log('handleAuthAction called');
+    console.log('Email:', email);
+    console.log('Password length:', password.length);
+    console.log('isSignUpMode:', isSignUpMode);
+    console.log('signIn function:', signIn);
+    console.log('signIn.toString():', signIn.toString());
+    if (!email || !password) {
+      Alert.alert(t('fill_all_fields'));
       return;
     }
-
-    if (typeof signIn !== 'function') {
-      Alert.alert(t('error'), 'signIn is not a function. Please check AuthContext usage.');
-      return;
-    }
-
-    console.log("Starting auth action...");
     try {
       if (isSignUpMode) {
-        console.log("Attempting sign up...");
+        console.log('Attempting sign up...');
         await signUp(email, password);
-        Alert.alert(t('success'), t('account_created'));
       } else {
-        console.log("Attempting sign in...");
-        console.log("About to call signIn with:", email, password);
-        try {
-          const result = await signIn(email, password);
-          console.log("Sign in result:", result);
-          console.log("Sign in successful, navigating to MainTabs");
-          // Navigate to main app after successful login
-          navigation.navigate('MainTabs');
-        } catch (signInError) {
-          console.error("Error in signIn call:", signInError);
-          throw signInError;
-        }
+        console.log('Attempting sign in...');
+        await signIn(email, password);
       }
     } catch (error) {
-      console.error("Auth error:", error);
-      Alert.alert(t('error'), error.message);
-    } finally {
-      console.log("Auth action completed");
+      Alert.alert(t('error'), error.message || t('system_error'));
     }
   };
 
@@ -89,7 +67,7 @@ const AuthScreen = () => {
           {isSignUpMode ? t('create_account') : t('welcome_back')}
         </Text>
         <Text style={styles.subtitle}>
-          {isSignUpMode ? "Join HairNature AI today!" : "Sign in to continue."}
+          {isSignUpMode ? "Join Root & Glow today!" : "Sign in to continue."}
         </Text>
 
         <View style={styles.formContainer}>

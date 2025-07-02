@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "HairAppFresh",
+    "name": "Root & Glow",
     "slug": "rootandglow",
     "owner": "zinzoubardy",
     "version": "1.0.0",
@@ -46,6 +46,7 @@
     ],
     "plugins": [
       "expo-localization"
-    ]
+    ],
+    "displayName": "Root & Glow"
   }
 }

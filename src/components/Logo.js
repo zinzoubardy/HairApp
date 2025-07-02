@@ -25,7 +25,7 @@ const Logo = ({ size = 'medium', style }) => {
         color={theme.colors.accent} 
         style={styles.icon}
       />
-      <Text style={[styles.text, { fontSize: sizes.text }]}>HairNature</Text>
+      <Text style={[styles.text, { fontSize: sizes.text }]}>Root & Glow</Text>
     </View>
   );
 };

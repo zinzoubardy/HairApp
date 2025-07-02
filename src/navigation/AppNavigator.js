@@ -5,6 +5,9 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { TouchableOpacity, View, StyleSheet, Platform } from "react-native";
 import { useAuth } from "../contexts/AuthContext";
 import i18n from "../i18n";
+import OnboardingCarouselScreen from '../screens/OnboardingCarouselScreen';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useNavigation } from '@react-navigation/native';
 
 import HomeScreen from "../screens/HomeScreen"; // Will be the new Dashboard
 import UploadScreen from "../screens/UploadScreen";
@@ -158,16 +161,45 @@ const t = (key) => {
 // The AppNavigator now includes the MainTabNavigator and other screens outside the tabs (like modal forms)
 // The Auth flow (handled in App.tsx) will navigate to "MainApp" stack which contains MainTabNavigator.
 const AppNavigator = () => {
+  const navigation = useNavigation();
   const { user, loadingInitial } = useAuth();
+  const [onboardingChecked, setOnboardingChecked] = React.useState(false);
+  const [onboardingComplete, setOnboardingComplete] = React.useState(false);
 
-  if (loadingInitial) {
-    return null; // This will show the loading screen from App.tsx
+  React.useEffect(() => {
+    const checkOnboarding = async () => {
+      if (user) {
+        const flag = await AsyncStorage.getItem('onboardingComplete');
+        setOnboardingComplete(flag === 'true');
+      }
+      setOnboardingChecked(true);
+    };
+    checkOnboarding();
+  }, [user]);
+
+  // Imperative navigation to OnboardingCarousel if needed
+  React.useEffect(() => {
+    if (user && onboardingChecked && !onboardingComplete && navigation && navigation.reset) {
+      navigation.reset({ index: 0, routes: [{ name: 'OnboardingCarousel' }] });
+    }
+  }, [user, onboardingChecked, onboardingComplete, navigation]);
+
+  if (loadingInitial || (user && !onboardingChecked)) {
+    return null; // Wait for onboarding check
   }
+
+  let initialRoute = 'Splash';
+  if (user) {
+    initialRoute = onboardingComplete ? 'MainTabs' : 'OnboardingCarousel';
+  }
+
+  // Debug log for navigation state
+  console.log('AppNavigator: user', user, 'onboardingComplete', onboardingComplete, 'initialRoute', initialRoute);
 
   return (
     <Stack.Navigator 
       screenOptions={defaultStackScreenOptions}
-      initialRouteName={user ? "MainTabs" : "Splash"}
+      initialRouteName={initialRoute}
     >
       <Stack.Screen
         name="Splash"
@@ -180,9 +212,14 @@ const AppNavigator = () => {
         options={{ headerShown: false }}
       />
       <Stack.Screen
+        name="OnboardingCarousel"
+        component={OnboardingCarouselScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
         name="MainTabs"
         component={MainTabNavigator}
-        options={{ headerShown: false }} // Hide header for the tab container itself
+        options={{ headerShown: false }}
       />
       {/* Screens that can be navigated to from within tabs but are not tabs themselves */}
       <Stack.Screen

@@ -1,9 +1,9 @@
-# HairNature AI - Intelligent Hair Analysis & Care Platform
+# Root & Glow - Intelligent Hair Analysis & Care Platform
 **Last Updated: December 2024**
 
 ## 🌟 Overview
 
-HairNature AI is a comprehensive React Native Expo application that provides AI-powered hair analysis and personalized hair care recommendations. The app combines advanced computer vision technology with expert hair care knowledge to deliver accurate, personalized hair assessments and actionable advice.
+Root & Glow is a comprehensive React Native Expo application that provides AI-powered hair analysis and personalized hair care recommendations. The app combines advanced computer vision technology with expert hair care knowledge to deliver accurate, personalized hair assessments and actionable advice.
 
 **Current Status**: ✅ **Fully Functional** - App is complete with AI analysis, user management, and beautiful UI/UX design.
 
@@ -463,6 +463,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ---
 
-**HairNature AI** - Transforming hair care through intelligent analysis and personalized recommendations. 🌟
+**Root & Glow** - Transforming hair care through intelligent analysis and personalized recommendations. 🌟
 
 *Last updated: December 2024*
