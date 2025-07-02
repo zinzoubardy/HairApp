@@ -73,7 +73,7 @@ const AuthScreen = () => {
         <View style={styles.formContainer}>
           <View style={styles.inputContainer}>
             <TextInput
-              style={styles.input}
+              style={[styles.input, {textAlign: 'left', writingDirection: 'ltr'}]}
               placeholder={t('email')}
               placeholderTextColor={theme.colors.textSecondary}
               value={email}

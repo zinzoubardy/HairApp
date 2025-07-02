@@ -906,6 +906,14 @@ const HomeScreen = () => {
           </View>
         </View>
       </Modal>
+      <TouchableOpacity
+        style={{ marginTop: 32, marginBottom: 16, alignSelf: 'center' }}
+        onPress={() => navigation.navigate('PrivacyPolicy')}
+      >
+        <Text style={{ color: theme.colors.accentGlow, textDecorationLine: 'underline', fontWeight: 'bold', fontSize: 15 }}>
+          Privacy Policy, Terms & Upload Rules
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 };

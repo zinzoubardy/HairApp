@@ -19,6 +19,7 @@ import RoutineScreen from "../screens/RoutineScreen";
 import SplashScreen from "../screens/SplashScreen"; // New Splash Screen
 import AuthScreen from "../screens/AuthScreen";
 import theme from "../styles/theme";
+import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -242,6 +243,7 @@ const AppNavigator = () => {
         component={AnalysisOptionsScreen}
         options={{ title: "Hair Analysis Options" }}
       />
+      <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} options={{ headerShown: true, title: 'Privacy Policy & Terms' }} />
       {/* Add other full-screen modals or navigation flows here if needed */}
     </Stack.Navigator>
   );

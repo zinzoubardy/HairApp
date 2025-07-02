@@ -9,6 +9,7 @@ const UploadScreen = ({ navigation }) => {
   const [imageUri, setImageUri] = useState(null);
   const [mediaLibraryPermission, setMediaLibraryPermission] = useState(null);
   const [cameraPermission, setCameraPermission] = useState(null);
+  const [acceptedUploadTerms, setAcceptedUploadTerms] = useState(false);
 
   useEffect(() => {
     const requestPermissions = async () => {
@@ -111,6 +112,23 @@ const UploadScreen = ({ navigation }) => {
         {t('upload_photo')}
       </Text>
 
+      <View style={{marginBottom: 16}}>
+        <Text style={{color: '#888', fontSize: 14, textAlign: 'center'}}>
+          For your privacy, please ensure your face is not visible in the photo. Only hair parts are needed for analysis.
+        </Text>
+        <View style={{flexDirection:'row',alignItems:'center',justifyContent:'center',marginTop:8}}>
+          <TouchableOpacity onPress={() => setAcceptedUploadTerms(!acceptedUploadTerms)} style={{width:24,height:24,borderWidth:1,borderColor:'#888',borderRadius:4,marginRight:8,backgroundColor:acceptedUploadTerms?'#6D8B74':'#fff',justifyContent:'center',alignItems:'center'}}>
+            {acceptedUploadTerms && <Text style={{color:'#fff',fontWeight:'bold'}}>✓</Text>}
+          </TouchableOpacity>
+          <Text style={{fontSize:13,color:'#444',flex:1}}>
+            I have read and accept the Privacy Policy, Terms of Use, and upload rules.
+          </Text>
+        </View>
+        <TouchableOpacity style={{marginTop:8}} onPress={() => navigation.navigate('PrivacyPolicy')}>
+          <Text style={{color:'#6D8B74',textAlign:'center',textDecorationLine:'underline',fontWeight:'bold'}}>Read Full Privacy Policy & Terms</Text>
+        </TouchableOpacity>
+      </View>
+
       {/* Permission denied warnings */}
       {!mediaLibraryPermission && !cameraPermission && Platform.OS !== 'web' && (
         <View style={styles.permissionWarningContainer}>
@@ -155,6 +173,7 @@ const UploadScreen = ({ navigation }) => {
           <TouchableOpacity
             style={{...styles.button, backgroundColor: theme.colors.secondary, marginTop: theme.spacing.md}}
             onPress={proceedToAnalysis}
+            disabled={!acceptedUploadTerms}
           >
             <Text style={{...styles.buttonText, fontFamily: theme.fonts.body}}>Proceed to Analysis</Text>
           </TouchableOpacity>

@@ -506,6 +506,19 @@ const ProfileScreen = ({ navigation }) => {
             )}
           </TouchableOpacity>
         )}
+
+        <TouchableOpacity style={{backgroundColor:'#E57373',padding:12,borderRadius:8,marginTop:24}} onPress={() => Alert.alert('Delete Account','To delete your account and all data, please contact support at support@rootandglow.com.') }>
+          <Text style={{color:'#fff',fontWeight:'bold',textAlign:'center'}}>Delete My Account & Data</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={{ marginTop: 32, marginBottom: 16, alignSelf: 'center' }}
+          onPress={() => navigation.navigate('PrivacyPolicy')}
+        >
+          <Text style={{ color: theme.colors.accentGlow, textDecorationLine: 'underline', fontWeight: 'bold', fontSize: 15 }}>
+            Privacy Policy, Terms & Upload Rules
+          </Text>
+        </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
   );

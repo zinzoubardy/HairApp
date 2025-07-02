@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image, TextInput, FlatList, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Image, TextInput, FlatList, Alert, Modal } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { updateProfile } from '../services/SupabaseService';
@@ -102,6 +102,23 @@ const OnboardingCarouselScreen = () => {
     heatUsageOther: '',
   });
   const [loading, setLoading] = useState(false);
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(true);
+
+  useEffect(() => {
+    AsyncStorage.getItem('privacyAccepted').then(val => {
+      if (val === 'true') {
+        setPrivacyAccepted(true);
+        setShowPrivacyModal(false);
+      }
+    });
+  }, []);
+
+  const handleAcceptPrivacy = async () => {
+    await AsyncStorage.setItem('privacyAccepted', 'true');
+    setPrivacyAccepted(true);
+    setShowPrivacyModal(false);
+  };
 
   const handleSelect = (stateKey, value) => {
     setAnswers((prev) => ({ ...prev, [stateKey]: value }));
@@ -204,6 +221,38 @@ const OnboardingCarouselScreen = () => {
   };
 
   const slide = slides[current];
+
+  if (!privacyAccepted) {
+    return (
+      <Modal visible={showPrivacyModal} transparent animationType="slide">
+        <View style={{flex:1,justifyContent:'center',alignItems:'center',backgroundColor:'rgba(0,0,0,0.7)'}}>
+          <View style={{backgroundColor:'#fff',padding:24,borderRadius:12,maxWidth:340}}>
+            <Text style={{fontWeight:'bold',fontSize:18,marginBottom:12}}>Privacy Policy & Terms of Use</Text>
+            <Text style={{fontSize:15,marginBottom:8}}>
+              By using Root & Glow, you agree to our Privacy Policy and Terms of Use. Your data is stored securely and only used for app functionality. You may request deletion of your data at any time.
+            </Text>
+            <Text style={{fontWeight:'bold',fontSize:15,marginBottom:4}}>Key Points:</Text>
+            <Text style={{fontSize:15,marginBottom:0}}>
+              • Your data is only used for providing personalized hair care and is never sold.{"\n"}
+              • You may request deletion of your account and data at any time.{"\n"}
+              • Uploaded photos must not contain faces or personal identifiers—only hair parts.{"\n"}
+              • You must not upload images or content that you do not have the right to share.{"\n"}
+              • By continuing, you accept all app rules, privacy, and terms.
+            </Text>
+            <Text style={{fontSize:15,marginBottom:16}}>
+              For full details, see our Privacy Policy and Terms of Use (link).
+            </Text>
+            <TouchableOpacity style={{backgroundColor:'#6D8B74',padding:12,borderRadius:8}} onPress={handleAcceptPrivacy}>
+              <Text style={{color:'#fff',fontWeight:'bold',textAlign:'center'}}>I Accept</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={{marginTop:12,marginBottom:8}} onPress={() => navigation.navigate('PrivacyPolicy')}>
+              <Text style={{color:'#6D8B74',textAlign:'center',textDecorationLine:'underline',fontWeight:'bold'}}>Read Full Privacy Policy & Terms</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    );
+  }
 
   return (
     <View style={styles.container}>

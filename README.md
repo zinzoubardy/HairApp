@@ -1,11 +1,48 @@
 # Root & Glow - Intelligent Hair Analysis & Care Platform
-**Last Updated: December 2024**
+**Last Updated: July 2024**
 
 ## 🌟 Overview
+Root & Glow is a comprehensive React Native Expo application that provides AI-powered hair analysis and personalized hair care recommendations. The app is fully rebranded, supports English, Arabic, and French, and is ready for production deployment.
 
-Root & Glow is a comprehensive React Native Expo application that provides AI-powered hair analysis and personalized hair care recommendations. The app combines advanced computer vision technology with expert hair care knowledge to deliver accurate, personalized hair assessments and actionable advice.
+---
 
-**Current Status**: ✅ **Fully Functional** - App is complete with AI analysis, user management, and beautiful UI/UX design.
+## 🚀 Current Status
+- **App Name:** Root & Glow (formerly HairNature AI)
+- **Onboarding:** Multi-language carousel, collects user profile data, supports "Other" custom answers
+- **Profile:** Data saved to Supabase (hair_goal, allergies, hair_concerns_preferences, hair_type, heat_usage)
+- **Deep Linking:** Configured for both development and production (custom scheme: `rootandglow://`)
+- **Logo:** Ready for transparent deployment (replace assets/icon.png, adaptive-icon.png, favicon.png as needed)
+- **Deployment:** Expo config is valid, ready for EAS build and store submission
+
+---
+
+## 🔒 Security & GDPR
+- **User Data:** All personal data is stored securely in Supabase with RLS (Row Level Security) enabled.
+- **Authentication:** Email/password with confirmation, deep link onboarding
+- **GDPR/Privacy:**
+  - Users are informed that their data is stored securely and only used for app functionality.
+  - **Consent:** On first sign-in, users must accept the Privacy Policy and Terms of Service (to be implemented as a modal or screen before onboarding is complete).
+  - **Right to Delete:** Users can request deletion of their account and data (add a button in Profile screen for this).
+  - **Data Minimization:** Only necessary data is collected (no face images required).
+
+---
+
+## 📸 User Photos
+- **Important:** Users should only upload photos of their hair. **Faces are not required and should not be visible in uploaded images.**
+- Add a note in the upload screen: "For your privacy, please ensure your face is not visible in the photo. Only hair parts are needed for analysis."
+
+---
+
+## 📝 Next Steps
+- [ ] Add Privacy Policy & Terms of Service modal/acceptance to onboarding
+- [ ] Add account/data deletion option in Profile
+- [ ] Add privacy note to Upload screen
+- [ ] Finalize transparent logo assets
+
+---
+
+## 💬 Support
+For any issues or questions, contact the Root & Glow team.
 
 ## 🚀 Key Features
 
@@ -465,4 +502,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 **Root & Glow** - Transforming hair care through intelligent analysis and personalized recommendations. 🌟
 
-*Last updated: December 2024*
+*Last updated: July 2024*
