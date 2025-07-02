@@ -46,7 +46,6 @@
     ],
     "plugins": [
       "expo-localization"
-    ],
-    "displayName": "Root & Glow"
+    ]
   }
 }
