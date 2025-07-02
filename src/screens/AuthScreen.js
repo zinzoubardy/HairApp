@@ -41,6 +41,7 @@ const AuthScreen = () => {
       if (isSignUpMode) {
         console.log('Attempting sign up...');
         await signUp(email, password);
+        Alert.alert(t('account_created'));
       } else {
         console.log('Attempting sign in...');
         await signIn(email, password);
