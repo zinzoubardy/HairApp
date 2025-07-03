@@ -1,13 +1,7 @@
-import { TOGETHER_AI_API_KEY } from '@env';
 import Together from "together-ai";
 import Constants from 'expo-constants';
 import { getPrompt } from '../i18n/prompts';
 import i18n from '../i18n';
-
-// Basic error checking for the API key
-if (!TOGETHER_AI_API_KEY) {
-  console.error("Together AI API Key is not provided! Please check your .env configuration.");
-}
 
 const getTogetherApiKey = () => {
   // Use Constants.expoConfig.extra for Expo builds
