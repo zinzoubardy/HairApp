@@ -1,34 +1,40 @@
 import { createClient } from "@supabase/supabase-js";
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@env';
+import Constants from 'expo-constants';
 // Import AsyncStorage if you decide to use it for auth persistence explicitly, though Supabase handles it by default in React Native.
 // import AsyncStorage from "@react-native-async-storage/async-storage";
 
-// Ideally, these would come from environment variables
-// For example, using react-native-dotenv:
-// import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@env";
+const getSupabaseConfig = () => {
+  // Use Constants.expoConfig.extra for Expo builds
+  const expoUrl = Constants?.expoConfig?.extra?.SUPABASE_URL;
+  const expoKey = Constants?.expoConfig?.extra?.SUPABASE_ANON_KEY;
+  
+  console.log('DEBUG: SUPABASE_URL:', expoUrl);
+  console.log('DEBUG: SUPABASE_ANON_KEY:', expoKey ? expoKey.slice(0, 8) + '...' : undefined);
+  
+  if (!expoUrl || !expoKey) {
+    console.error("Supabase configuration is not provided! Please check your app.json configuration.");
+    return null;
+  }
+  
+  return { url: expoUrl, key: expoKey };
+};
 
-// Basic error checking for the keys
-if (!SUPABASE_URL) {
-  console.error("Supabase URL is not provided! Please check your configuration.");
+const config = getSupabaseConfig();
+if (!config) {
+  console.error("Cannot initialize Supabase - no configuration available");
 }
-if (!SUPABASE_ANON_KEY) {
-  console.error("Supabase Anon Key is not provided! Please check your configuration.");
-}
-
-console.log('DEBUG: SUPABASE_URL:', SUPABASE_URL);
-console.log('DEBUG: SUPABASE_ANON_KEY:', SUPABASE_ANON_KEY ? SUPABASE_ANON_KEY.slice(0, 8) + '...' : undefined);
 
 // Initialize the Supabase client
 // Note: Supabase JS V2 automatically uses AsyncStorage in React Native environments.
 // Explicitly passing AsyncStorage is generally not needed unless you have specific advanced requirements.
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+export const supabase = config ? createClient(config.url, config.key, {
   auth: {
     // storage: AsyncStorage, // Not typically needed for React Native with Supabase V2+
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false, // Crucial for React Native to prevent issues with URL-based session detection
   },
-});
+}) : null;
 
 // Example of a simple helper function (optional, can be added as needed later)
 // export const getCurrentUser = async () => {

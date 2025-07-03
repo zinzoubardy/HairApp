@@ -12,41 +12,46 @@ export const AuthProvider = ({ children }) => {
   const [loadingAuthAction, setLoadingAuthAction] = useState(false); // For specific auth actions like sign-in/up
 
   useEffect(() => {
-    const fetchSession = async () => {
+    console.log('AuthContext: Starting initialization...');
+    
+    if (!supabase) {
+      console.error('AuthContext: Supabase is not initialized - cannot start auth');
+      setLoadingInitial(false);
+      return;
+    }
+    
+    const initializeAuth = async () => {
       try {
-        setLoadingInitial(true);
-        const { data: { session: currentSession }, error } = await supabase.auth.getSession();
+        console.log('AuthContext: Getting initial session...');
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
         if (error) {
-          console.error("Error fetching session:", error.message);
-          // Potentially show an error to the user or retry
+          console.error('AuthContext: Error getting initial session:', error);
+        } else {
+          console.log('AuthContext: Initial session result:', session ? 'Session found' : 'No session');
         }
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
-      } catch (e) {
-        console.error("Exception fetching session:", e);
-      } finally {
+        
+        setSession(session);
+        setUser(session?.user ?? null);
+        setLoadingInitial(false);
+        console.log('AuthContext: Initialization complete');
+      } catch (error) {
+        console.error('AuthContext: Error during initialization:', error);
         setLoadingInitial(false);
       }
     };
 
-    fetchSession();
+    initializeAuth();
 
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, newSession) => {
-        console.log("Auth event:", event, newSession);
-        setSession(newSession);
-        setUser(newSession?.user ?? null);
-        setLoadingInitial(false); // Ensure loading is false after auth state changes too
-        setLoadingAuthAction(false); // Reset action loading on auth change
-      }
-    );
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('AuthContext: Auth state change event:', event, session ? 'Session present' : 'No session');
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoadingInitial(false);
+      setLoadingAuthAction(false); // Reset action loading on auth change
+    });
 
-    // Cleanup listener on unmount
-    return () => {
-      if (authListener && authListener.subscription) {
-        authListener.subscription.unsubscribe();
-      }
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
   const signIn = async (email, password) => {

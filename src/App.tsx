@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { NavigationContainer } from '@react-navigation/native';
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { ActivityIndicator, View, StyleSheet } from 'react-native';
+import { ActivityIndicator, View, StyleSheet, Text } from 'react-native';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import AppNavigator from "./navigation/AppNavigator";
 import theme from './styles/theme';
@@ -34,15 +34,19 @@ const linking = {
 function Root() {
   const { user, loadingInitial } = useAuth() || { user: null, loadingInitial: false };
   const [languageReady, setLanguageReady] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     // Initialize i18n when the app starts
     const initApp = async () => {
       try {
+        console.log('App: Starting initialization...');
         await initializeI18n();
+        console.log('App: i18n initialization complete');
         setLanguageReady(true);
       } catch (error) {
-        console.log('Error initializing i18n in App:', error);
+        console.error('Error initializing i18n in App:', error);
+        setError(error.message);
         setLanguageReady(true); // Continue anyway
       }
     };
@@ -50,10 +54,25 @@ function Root() {
     initApp();
   }, []);
 
+  console.log('App: Root render - loadingInitial:', loadingInitial, 'languageReady:', languageReady, 'error:', error);
+
+  if (error) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={{ color: 'red', textAlign: 'center', margin: 20 }}>
+          Error: {error}
+        </Text>
+      </View>
+    );
+  }
+
   if (loadingInitial || !languageReady) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={theme.colors.accent} />
+        <Text style={{ marginTop: 10, color: theme.colors.textSecondary }}>
+          Loading...
+        </Text>
       </View>
     );
   }

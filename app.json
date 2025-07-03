@@ -36,7 +36,9 @@
       "eas": {
         "projectId": "c2b26dd7-eccf-4d7a-8e79-4cede568901e"
       },
-      "TOGETHER_API_KEY": "tgp_v1_aHRkTd-Bna870IqKOcsHXNp55Tjsg3yYuoPAfok43gk"
+      "TOGETHER_API_KEY": "tgp_v1_aHRkTd-Bna870IqKOcsHXNp55Tjsg3yYuoPAfok43gk",
+      "SUPABASE_URL": "https://rsttygxdlrbkplebzhxm.supabase.co",
+      "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsImtpZCI6IlZBdjd2ZWd2V2hENXAzeUkiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL3JzdHR5Z3hkbHJia3BsZWJ6aHhtLnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiI0MDRmNzUwZS0zMjA5LTQ1NzEtYTc0MS1kNDhlMzNmMWQwMjkiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzUxNTAyNTA3LCJpYXQiOjE3NTE0OTg5MDcsImVtYWlsIjoiZHJpaGVtekBnbWFpbC5jb20iLCJwaG9uZSI6IiIsImFwcF9tZXRhZGF0YSI6eyJwcm92aWRlciI6ImVtYWlsIiwicHJvdmlkZXJzIjpbImVtYWlsIl19LCJ1c2VyX21ldGFkYXRhIjp7ImVtYWlsIjoiZHJpaGVtekBnbWFpbC5jb20iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwicGhvbmVfdmVyaWZpZWQiOmZhbHNlLCJzdWIiOiI0MDRmNzUwZS0zMjA5LTQ1NzEtYTc0MS1kNDhlMzNmMWQwMjkifSwicm9sZSI6ImF1dGhlbnRpY2F0ZWQiLCJhYWwiOiJhYWwxIiwiYW1yIjpbeyJtZXRob2QiOiJwYXNzd29yZCIsInRpbWVzdGFtcCI6MTc1MTQ5ODkwN31dLCJzZXNzaW9uX2lkIjoiNzlhM2VkMjctYzRlOC00YWU2LWFhODEtY2I4ZDAxNTQ1MTU2IiwiaXNfYW5vbnltb3VzIjpmYWxzZX0.RwpXqfnIZ0KQOV_duvdLX0YM9JolNfD35ZBZeW8yWVY"
     },
     "sdkVersion": "52.0.0",
     "platforms": [

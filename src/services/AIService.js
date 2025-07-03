@@ -10,17 +10,24 @@ if (!TOGETHER_AI_API_KEY) {
 }
 
 const getTogetherApiKey = () => {
+  // Use Constants.expoConfig.extra for Expo builds
   const expoKey = Constants?.expoConfig?.extra?.TOGETHER_API_KEY;
-  const envKey = process.env.TOGETHER_API_KEY;
   console.log('DEBUG Together API Key (expoConfig.extra):', expoKey);
-  console.log('DEBUG Together API Key (process.env):', envKey);
-  if (expoKey) {
-    return expoKey;
+  
+  if (!expoKey) {
+    console.error("Together AI API Key is not provided! Please check your app.json configuration.");
+    return null;
   }
-  return envKey;
+  
+  return expoKey;
 };
 
-const together = new Together({ apiKey: getTogetherApiKey() });
+const apiKey = getTogetherApiKey();
+if (!apiKey) {
+  console.error("Cannot initialize Together AI - no API key available");
+}
+
+const together = apiKey ? new Together({ apiKey }) : null;
 
 // Get current language for AI prompts
 const getCurrentLanguage = () => {
@@ -33,6 +40,10 @@ const getCurrentLanguage = () => {
 };
 
 export const getAIHairstyleAdvice = async (prompt) => {
+  if (!together) {
+    return { success: false, error: "AI service is not available. Please check your configuration." };
+  }
+
   if (!prompt || typeof prompt !== 'string' || prompt.trim() === "") {
     return { success: false, error: "Prompt cannot be empty." };
   }
@@ -128,6 +139,10 @@ USER'S QUESTION: ${prompt}`;
 };
 
 export const getHairAnalysis = async (profile, imageReferences) => {
+  if (!together) {
+    return { success: false, error: "AI service is not available. Please check your configuration." };
+  }
+
   if (!imageReferences || !imageReferences.up || !imageReferences.back || !imageReferences.left || !imageReferences.right) {
     return { success: false, error: 'All four image angles are required.' };
   }
