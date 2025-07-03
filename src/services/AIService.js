@@ -9,19 +9,48 @@ const getTogetherApiKey = () => {
   console.log('DEBUG Together API Key (expoConfig.extra):', expoKey);
   
   if (!expoKey) {
-    console.error("Together AI API Key is not provided! Please check your app.json configuration.");
-    return null;
+    console.warn("Together AI API Key not found in expoConfig.extra - checking process.env as fallback");
+    const envKey = process.env.TOGETHER_API_KEY;
+    if (!envKey) {
+      console.error("Together AI API Key is not provided! Please check your app.json configuration.");
+      return null;
+    }
+    return envKey;
   }
   
   return expoKey;
 };
 
-const apiKey = getTogetherApiKey();
-if (!apiKey) {
-  console.error("Cannot initialize Together AI - no API key available");
-}
+// Initialize API key and Together client lazily
+let together = null;
+let initializationAttempted = false;
 
-const together = apiKey ? new Together({ apiKey }) : null;
+const initializeTogetherAI = () => {
+  if (initializationAttempted && together) {
+    return together;
+  }
+  
+  initializationAttempted = true;
+  const apiKey = getTogetherApiKey();
+  if (apiKey) {
+    try {
+      together = new Together({ apiKey });
+      console.log('Together AI client initialized successfully');
+    } catch (error) {
+      console.error('Failed to initialize Together AI client:', error);
+      together = null;
+    }
+  } else {
+    console.error("Cannot initialize Together AI - no API key available");
+  }
+  return together;
+};
+
+// Export function to reinitialize if needed
+export const reinitializeTogetherAI = () => {
+  initializationAttempted = false;
+  return initializeTogetherAI() !== null;
+};
 
 // Get current language for AI prompts
 const getCurrentLanguage = () => {
@@ -34,7 +63,8 @@ const getCurrentLanguage = () => {
 };
 
 export const getAIHairstyleAdvice = async (prompt) => {
-  if (!together) {
+  const client = initializeTogetherAI();
+  if (!client) {
     return { success: false, error: "AI service is not available. Please check your configuration." };
   }
 
@@ -111,7 +141,7 @@ export const getAIHairstyleAdvice = async (prompt) => {
 
 USER'S QUESTION: ${prompt}`;
     
-    const response = await together.chat.completions.create({
+    const response = await client.chat.completions.create({
       messages: [{ role: 'user', content: enhancedPrompt }],
       model: 'meta-llama/Llama-3.3-70B-Instruct-Turbo-Free',
       max_tokens: 1000,
@@ -133,7 +163,8 @@ USER'S QUESTION: ${prompt}`;
 };
 
 export const getHairAnalysis = async (profile, imageReferences) => {
-  if (!together) {
+  const client = initializeTogetherAI();
+  if (!client) {
     return { success: false, error: "AI service is not available. Please check your configuration." };
   }
 
@@ -149,7 +180,7 @@ export const getHairAnalysis = async (profile, imageReferences) => {
     const anglePrompt = `Analyze the ${angle} view of the user\'s hair. Focus on texture, scalp, color, and any visible issues.`;
     try {
       console.log(`Sending vision model request for ${angle}:`, imageUrl);
-      const response = await together.chat.completions.create({
+      const response = await client.chat.completions.create({
         messages: [
           {
             role: "user",
@@ -178,7 +209,7 @@ export const getHairAnalysis = async (profile, imageReferences) => {
       // Try alternative vision model if first one fails
       try {
         console.log(`Trying alternative vision model for ${angle} image...`);
-        const altResponse = await together.chat.completions.create({
+        const altResponse = await client.chat.completions.create({
           messages: [
             {
               role: "user",
@@ -229,7 +260,7 @@ export const getHairAnalysis = async (profile, imageReferences) => {
 INDIVIDUAL IMAGE ANALYSES:
 ${imageAnalyses.map(analysis => `**${analysis.angle.toUpperCase()} VIEW:**\n${analysis.analysis}`).join('\n\n')}`;
 
-      const finalResponse = await together.chat.completions.create({
+      const finalResponse = await client.chat.completions.create({
         messages: [{ role: 'user', content: combinedPrompt }],
         model: 'meta-llama/Llama-3.3-70B-Instruct-Turbo-Free',
         max_tokens: 1500,
@@ -258,6 +289,11 @@ export const getGeneralHairAnalysis = async (imageUrl, question) => {
     return { success: false, error: "Image URL and question are required for analysis." };
   }
 
+  const client = initializeTogetherAI();
+  if (!client) {
+    return { success: false, error: "AI service is not available. Please check your configuration." };
+  }
+
   // Use the selected language for the prompt
   const currentLanguage = getCurrentLanguage();
   const generalAnalysisPrompt = getPrompt('generalAnalysis', currentLanguage);
@@ -269,7 +305,7 @@ USER'S QUESTION: ${question}`;
   try {
     console.log("Sending general hair analysis with image:", imageUrl);
     
-    const response = await together.chat.completions.create({
+    const response = await client.chat.completions.create({
       messages: [
         {
           role: "user",
@@ -308,7 +344,10 @@ USER'S QUESTION: ${question}`;
 
 // Call Together AI to generate a personalized routine from analysis data
 export const callTogetherAIForRoutine = async (analysisData) => {
-  const together = new Together({ apiKey: getTogetherApiKey() });
+  const client = initializeTogetherAI();
+  if (!client) {
+    return { error: "AI service is not available. Please check your configuration." };
+  }
   const currentLanguage = getCurrentLanguage();
   const routinePrompt = getPrompt('routineGeneration', currentLanguage);
   
@@ -318,7 +357,7 @@ Hair Analysis:
 ${JSON.stringify(analysisData, null, 2)}`;
 
   try {
-    const response = await together.chat.completions.create({
+    const response = await client.chat.completions.create({
       messages: [
         { role: 'user', content: prompt },
       ],
