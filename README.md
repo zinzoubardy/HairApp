@@ -1,6 +1,57 @@
 # Root & Glow - Intelligent Hair Analysis & Care Platform
 **Last Updated: July 2024**
 
+## 🚦 MVP Progress & Roadmap (July 2024)
+
+### ✅ What is Done (MVP)
+- [x] App rebranding (Root & Glow, logo, theme)
+- [x] Multi-language onboarding carousel (EN/FR/AR)
+- [x] User profile data collection (hair goals, allergies, preferences)
+- [x] Supabase integration (auth, profile, storage, RLS)
+- [x] AI-powered hair analysis (Together AI, multi-angle, general analysis)
+- [x] Deep linking for email confirmation and onboarding
+- [x] Navigation flow: Splash, Auth, Onboarding, Main Tabs
+- [x] Privacy policy and terms accessible from key screens
+- [x] Upload rules and privacy note on image upload
+- [x] Error handling, loading states, and debug logging
+- [x] Environment variable management for Expo/production
+- [x] Production-ready Expo config (scheme, icons, splash)
+
+### 🟡 In Progress / Not Yet Done (MVP)
+- [ ] Privacy Policy & Terms acceptance modal in onboarding
+- [ ] Account/data deletion option in Profile
+- [ ] Finalize transparent logo assets
+- [ ] Minor UI polish and accessibility review
+
+### ⏭️ Next Steps
+- Implement Privacy Policy & Terms acceptance modal (block onboarding until accepted)
+- Add account/data deletion button to Profile screen
+- Add privacy note to Upload screen ("No faces, only hair")
+- Finalize and test transparent logo assets
+- Conduct final QA and accessibility review
+- Prepare for App Store/Play Store submission
+
+### 📊 MVP Completion Estimate
+- **MVP Completion:** 85-90%
+- **Core features are complete and stable.**
+- **Remaining work:** Privacy/consent modals, account deletion, final polish
+
+---
+
+### 🚀 What Could Be in the Next Version (v1.1+)
+- Social sharing of analysis results
+- Hair care product recommendations (with affiliate links)
+- Push notifications for routine reminders
+- In-app feedback and support chat
+- More advanced AI models (paid tier, faster responses)
+- Hair growth tracking over time (progress photos)
+- More languages (Spanish, German, etc.)
+- Dark mode
+- Pro/paid features (export PDF, expert review)
+- Integration with wearable devices (scalp sensors, etc.)
+
+---
+
 ## 🌟 Overview
 Root & Glow is a comprehensive React Native Expo application that provides AI-powered hair analysis and personalized hair care recommendations. The app is fully rebranded, supports English, Arabic, and French, and is ready for production deployment.
 
