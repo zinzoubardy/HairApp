@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "../services/SupabaseService"; // Corrected path
 import { StyleSheet } from "react-native";
 import theme from "../styles/theme";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const AuthContext = createContext(null); // Initialize with null or a default shape
 
@@ -108,7 +109,8 @@ export const AuthProvider = ({ children }) => {
   const signOut = async () => {
     setLoadingAuthAction(true);
     const { error } = await supabase.auth.signOut();
-    // User and session will be set to null by onAuthStateChange
+    // Clear onboarding and privacy flags for next user
+    await AsyncStorage.multiRemove(['onboardingComplete', 'privacyAccepted']);
     setLoadingAuthAction(false);
     return { error };
   };

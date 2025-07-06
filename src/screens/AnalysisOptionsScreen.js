@@ -7,6 +7,7 @@ import { useNavigation } from '@react-navigation/native';
 import { uploadProfileImage, supabase, getProfile, saveHairAnalysisResult } from '../services/SupabaseService';
 import { getAIHairstyleAdvice, getHairAnalysis, getGeneralHairAnalysis } from '../services/AIService';
 import { useTranslation } from '../i18n';
+import Footer from '../components/Footer';
 
 const AnalysisOptionsScreen = () => {
   const navigation = useNavigation();
@@ -321,6 +322,7 @@ const AnalysisOptionsScreen = () => {
           </View>
         )}
       </ScrollView>
+      <Footer />
     </View>
   );
 };

@@ -9,6 +9,7 @@ import i18n from '../i18n';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from '../i18n';
 import { I18nManager } from 'react-native';
+import Footer from '../components/Footer';
 
 const { width } = Dimensions.get('window');
 
@@ -715,13 +716,11 @@ const HomeScreen = () => {
   }
 
   return (
-    <View style={styles.root}>
-      
-
+    <View style={{flex:1}}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-      <View style={styles.centralLogoContainer}>
-        <Image source={require('../../assets/splash.png')} style={styles.bigLogo} />
-      </View>
+        <View style={styles.centralLogoContainer}>
+          <Image source={require('../../assets/splash.png')} style={styles.bigLogo} />
+        </View>
         {/* Global Hair State */}
         <View style={styles.globalBox}>
           <Text style={styles.globalTitle}>{t('overall_hair_health')}</Text>
@@ -822,98 +821,7 @@ const HomeScreen = () => {
           )}
         </View>
       </ScrollView>
-
-      {/* Recipe Modal */}
-      <Modal visible={!!selectedRecipe} animationType="slide" transparent onRequestClose={handleRecipeClose}>
-        <View style={styles.recipeModalOverlay}>
-          <View style={styles.recipeModalBox}>
-            <Text style={styles.recipeModalTitle}>{selectedRecipe?.title}</Text>
-            <Text style={styles.recipeModalDescription}>{selectedRecipe?.short_description}</Text>
-            
-            {selectedRecipe?.ingredients && (
-              <View style={styles.recipeSection}>
-                <Text style={styles.recipeSectionTitle}>{t('ingredients')}</Text>
-                {selectedRecipe.ingredients.map((ingredient, index) => (
-                  <Text key={index} style={styles.recipeIngredient}>
-                    • {ingredient.name}: {ingredient.amount}
-                  </Text>
-                ))}
-              </View>
-            )}
-            
-            {selectedRecipe?.instructions && (
-              <View style={styles.recipeSection}>
-                <Text style={styles.recipeSectionTitle}>{t('instructions')}</Text>
-                {(() => {
-                  console.log('DEBUG: instructions type:', typeof selectedRecipe.instructions);
-                  console.log('DEBUG: instructions value:', selectedRecipe.instructions);
-                  
-                  let instructionsArray = [];
-                  if (Array.isArray(selectedRecipe.instructions)) {
-                    // Handle the malformed array from failed migration
-                    const firstItem = selectedRecipe.instructions[0];
-                    if (firstItem === '[') {
-                      // This is the malformed case - try to reconstruct the JSON
-                      const jsonString = selectedRecipe.instructions.join('\n');
-                      try {
-                        const parsed = JSON.parse(jsonString);
-                        instructionsArray = Array.isArray(parsed) ? parsed : [];
-                      } catch (e) {
-                        // Fallback: filter out brackets and quotes, clean up the array
-                        instructionsArray = selectedRecipe.instructions
-                          .filter(item => item !== '[' && item !== ']' && item.trim() !== '')
-                          .map(item => item.replace(/^[\s"]+|[\s"]+$/g, '')) // Remove quotes and whitespace
-                          .filter(item => item.length > 0);
-                      }
-                    } else {
-                      instructionsArray = selectedRecipe.instructions;
-                    }
-                  } else if (typeof selectedRecipe.instructions === 'string') {
-                    // Try to parse as JSON if it's still a string
-                    try {
-                      const parsed = JSON.parse(selectedRecipe.instructions);
-                      instructionsArray = Array.isArray(parsed) ? parsed : [selectedRecipe.instructions];
-                    } catch (e) {
-                      // Split by newlines if JSON parsing fails
-                      instructionsArray = selectedRecipe.instructions.split('\n').filter(line => line.trim());
-                    }
-                  }
-                  
-                  return instructionsArray.map((instruction, index) => (
-                    <Text key={index} style={styles.recipeInstruction}>
-                      {index + 1}. {instruction}
-                    </Text>
-                  ));
-                })()}
-              </View>
-            )}
-            
-            {selectedRecipe?.preparation_time_minutes && (
-              <Text style={styles.recipeTime}>
-                ⏱️ Preparation time: {selectedRecipe.preparation_time_minutes} minutes
-              </Text>
-            )}
-            
-            {selectedRecipe?.difficulty && (
-              <Text style={styles.recipeDifficulty}>
-                📊 Difficulty: {selectedRecipe.difficulty}
-              </Text>
-            )}
-            
-            <TouchableOpacity style={styles.recipeModalClose} onPress={handleRecipeClose}>
-              <Text style={{ color: '#FFFFFF', fontWeight: 'bold' }}>Close</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-      <TouchableOpacity
-        style={{ marginTop: 32, marginBottom: 16, alignSelf: 'center' }}
-        onPress={() => navigation.navigate('PrivacyPolicy')}
-      >
-        <Text style={{ color: theme.colors.accentGlow, textDecorationLine: 'underline', fontWeight: 'bold', fontSize: 15 }}>
-          Privacy Policy, Terms & Upload Rules
-        </Text>
-      </TouchableOpacity>
+      <Footer />
     </View>
   );
 };

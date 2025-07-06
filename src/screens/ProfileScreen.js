@@ -20,6 +20,7 @@ import { getProfile, updateProfile, uploadProfileImage, saveHairAnalysisResult }
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { getHairAnalysis } from '../services/AIService';
 import { useTranslation } from '../i18n';
+import Footer from '../components/Footer';
 
 const HAIR_IMAGE_SLOTS = [
   { angle: 'up', label: 'Top View', icon: 'arrow-up-bold-circle', description: 'Photo of the top of your head' },
@@ -521,6 +522,7 @@ const ProfileScreen = ({ navigation }) => {
           </Text>
         </TouchableOpacity>
       </ScrollView>
+      <Footer />
     </KeyboardAvoidingView>
   );
 };

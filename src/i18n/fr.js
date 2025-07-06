@@ -188,4 +188,8 @@ export default {
   next: "Suivant",
   skip: "Passer",
   finish: "Terminer",
+  // Disclaimer
+  disclaimer_title: "Avertissement",
+  disclaimer_text: "Root & Glow n'est pas une application médicale. Les informations et recommandations fournies sont générées par une intelligence artificielle et sont uniquement à titre informatif. Elles ne constituent pas un avis médical. Consultez toujours un professionnel de santé qualifié avant d'apporter des modifications à votre routine capillaire ou d'utiliser des produits ou recettes suggérés par cette application.",
+  accept_and_continue: "Accepter et continuer",
 }; 

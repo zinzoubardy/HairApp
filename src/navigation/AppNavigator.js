@@ -169,8 +169,9 @@ const AppNavigator = () => {
   React.useEffect(() => {
     const checkOnboarding = async () => {
       if (user) {
-        const flag = await AsyncStorage.getItem('onboardingComplete');
-        setOnboardingComplete(flag === 'true');
+        const onboardingFlag = await AsyncStorage.getItem('onboardingComplete');
+        const privacyFlag = await AsyncStorage.getItem('privacyAccepted');
+        setOnboardingComplete(onboardingFlag === 'true' && privacyFlag === 'true');
       }
       setOnboardingChecked(true);
     };

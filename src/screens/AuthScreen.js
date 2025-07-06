@@ -46,10 +46,9 @@ const AuthScreen = () => {
       try {
         const user = await AsyncStorage.getItem('user');
         if (user) {
-          const userData = JSON.parse(user);
           const onboardingFlag = await AsyncStorage.getItem('onboardingComplete');
-          const isOnboardingComplete = onboardingFlag === 'true';
-          
+          const privacyFlag = await AsyncStorage.getItem('privacyAccepted');
+          const isOnboardingComplete = onboardingFlag === 'true' && privacyFlag === 'true';
           if (isOnboardingComplete) {
             navigation.replace('MainTabs');
           } else {
@@ -60,7 +59,6 @@ const AuthScreen = () => {
         console.log('Error checking user and navigating:', error);
       }
     };
-    
     checkUserAndNavigate();
   }, [navigation]);
 

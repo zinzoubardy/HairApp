@@ -104,6 +104,8 @@ const OnboardingCarouselScreen = () => {
   const [loading, setLoading] = useState(false);
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(true);
+  const [showDisclaimerModal, setShowDisclaimerModal] = useState(false);
+  const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
 
   useEffect(() => {
     AsyncStorage.getItem('privacyAccepted').then(val => {
@@ -141,7 +143,8 @@ const OnboardingCarouselScreen = () => {
 
   const handleNext = async () => {
     if (slides[current].type === 'done') {
-      navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] });
+      // Show disclaimer modal before finishing onboarding
+      setShowDisclaimerModal(true);
       return;
     }
     // On last question, submit
@@ -157,7 +160,6 @@ const OnboardingCarouselScreen = () => {
             ...(answers.products.includes('other') && answers.productsOther ? [answers.productsOther] : [])
           ].join(','),
         });
-        await AsyncStorage.setItem('onboardingComplete', 'true');
         setCurrent((c) => c + 1);
       } catch (e) {
         Alert.alert('Error', e.message || 'Failed to update profile.');
@@ -180,6 +182,14 @@ const OnboardingCarouselScreen = () => {
     } else {
       setCurrent((c) => c + 1);
     }
+  };
+
+  const handleAcceptDisclaimer = async () => {
+    setShowDisclaimerModal(false);
+    setDisclaimerAccepted(true);
+    await AsyncStorage.setItem('onboardingComplete', 'true');
+    await AsyncStorage.setItem('privacyAccepted', 'true');
+    navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] });
   };
 
   const renderOptions = (options, stateKey, multi = false) => {
@@ -247,6 +257,22 @@ const OnboardingCarouselScreen = () => {
             </TouchableOpacity>
             <TouchableOpacity style={{marginTop:12,marginBottom:8}} onPress={() => navigation.navigate('PrivacyPolicy')}>
               <Text style={{color:'#6D8B74',textAlign:'center',textDecorationLine:'underline',fontWeight:'bold'}}>Read Full Privacy Policy & Terms</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    );
+  }
+
+  if (showDisclaimerModal) {
+    return (
+      <Modal visible={showDisclaimerModal} transparent animationType="slide">
+        <View style={{flex:1,justifyContent:'center',alignItems:'center',backgroundColor:'rgba(0,0,0,0.7)'}}>
+          <View style={{backgroundColor:'#fff',padding:24,borderRadius:12,maxWidth:340}}>
+            <Text style={{fontWeight:'bold',fontSize:18,marginBottom:12}}>{t('disclaimer_title')}</Text>
+            <Text style={{fontSize:15,marginBottom:16}}>{t('disclaimer_text')}</Text>
+            <TouchableOpacity style={{backgroundColor:'#6D8B74',padding:12,borderRadius:8}} onPress={handleAcceptDisclaimer}>
+              <Text style={{color:'#fff',fontWeight:'bold',textAlign:'center'}}>{t('accept_and_continue')}</Text>
             </TouchableOpacity>
           </View>
         </View>

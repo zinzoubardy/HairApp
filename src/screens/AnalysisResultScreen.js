@@ -6,6 +6,7 @@ import theme from '../styles/theme';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useTranslation } from '../i18n';
 import { getHairAnalysisById } from '../services/SupabaseService';
+import Footer from '../components/Footer';
 
 const AnalysisResultScreen = () => {
   const navigation = useNavigation();
@@ -329,6 +330,7 @@ const AnalysisResultScreen = () => {
           </View>
         </LinearGradient>
       </ScrollView>
+      <Footer />
     </LinearGradient>
   );
 };
