@@ -150,6 +150,11 @@ const AnalysisResultScreen = () => {
     'soap': 'soap',
     'doctor': 'doctor',
     'oil_bottle': 'bottle-tonic',
+    'droplet': 'tint',
+    'water': 'tint',
+    'mask': 'face-woman-shimmer',
+    'palette': 'palette',
+    'fire': 'fire',
     'default': 'lightbulb',
   };
 

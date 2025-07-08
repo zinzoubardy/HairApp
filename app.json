@@ -47,7 +47,8 @@
       "web"
     ],
     "plugins": [
-      "expo-localization"
+      "expo-localization",
+      "expo-notifications"
     ],
     "scheme": "rootandglow"
   }

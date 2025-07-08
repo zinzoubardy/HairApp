@@ -284,68 +284,74 @@ export const updateProfile = async (profileData) => { // profileData should cont
 // Get the latest AI-generated routine for the current user
 export const getLatestAIRoutine = async () => {
   try {
-    console.log('getLatestAIRoutine called');
     const userResult = await supabase.auth.getUser();
+    if (!userResult.data.user) {
+      return { data: null, error: { message: 'User not authenticated' } };
+    }
+    const userId = userResult.data.user.id;
+
     console.log('DEBUG getLatestAIRoutine userResult:', userResult);
-    const userId = userResult.data.user?.id;
     console.log('DEBUG getLatestAIRoutine userId:', userId);
+
     const { data, error } = await supabase
       .from('ai_routines')
       .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
+      .limit(1);
+
     console.log('DEBUG getLatestAIRoutine data:', data, 'error:', error);
-    return { data, error };
+
+    return { data: data?.[0] || null, error };
   } catch (e) {
     console.error('getLatestAIRoutine error:', e);
-    return { data: null, error: e };
+    return { data: null, error: { message: 'Failed to fetch routine' } };
   }
 };
 
 // Request a new AI routine (calls AI and upserts result)
 export const requestAIRoutine = async () => {
   try {
-    // 1. Get latest hair analysis for the user
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return { data: null, error: { message: 'User not authenticated.' } };
-    console.log('DEBUG requestAIRoutine userId:', user.id);
-    const { data: analysis, error: analysisError } = await supabase
-      .from('hair_analysis_results')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
+    const userResult = await supabase.auth.getUser();
+    if (!userResult.data.user) {
+      return { data: null, error: { message: 'User not authenticated' } };
+    }
+    const userId = userResult.data.user.id;
+
+    console.log('DEBUG requestAIRoutine userId:', userResult.data.user.id);
+
+    // 1. Get latest analysis
+    const { data: analysis, error: analysisError } = await getHairAnalysisResult(userId);
     if (analysisError || !analysis) {
-      return { data: null, error: { message: 'No hair analysis found.' } };
+      return { data: null, error: { message: 'No analysis found. Please complete a hair analysis first.' } };
     }
 
     // 2. Call AI to generate routine
     let aiResult = await callTogetherAIForRoutine(analysis);
     console.log('AI routine raw result:', aiResult);
-    if (aiResult && aiResult.error) {
-      // Use fallback routine if AI fails
+
+    // Use fallback routine if AI fails
+    if (!aiResult || !aiResult.steps || aiResult.steps.length === 0) {
       aiResult = {
         title: 'Sample Personalized Routine',
         steps: [
-          { title: 'Step 1: Gentle Cleansing', description: 'Use a gentle shampoo and conditioner to maintain the health and integrity of your hair.' },
-          { title: 'Step 2: Regular Trimming', description: 'Schedule regular trimming or styling sessions to keep your hair tidy and reduce messiness.' },
-          { title: 'Step 3: Nourish & Protect', description: 'Apply a hair serum or oil to tame texture and add shine. Protect your hair from wind and environmental damage.' },
-        ],
+          { title: 'Gentle Cleansing', description: 'Use a sulfate-free shampoo' },
+          { title: 'Conditioning', description: 'Apply conditioner from mid-lengths to ends' },
+          { title: 'Styling', description: 'Apply heat protectant and style as desired' }
+        ]
       };
     }
+
     let routineObj = aiResult;
     if (!routineObj || !routineObj.steps || routineObj.steps.length === 0) {
       // Use fallback routine if AI and parsing both fail
       routineObj = {
         title: 'Sample Personalized Routine',
         steps: [
-          { title: 'Step 1: Gentle Cleansing', description: 'Use a gentle shampoo and conditioner to maintain the health and integrity of your hair.' },
-          { title: 'Step 2: Regular Trimming', description: 'Schedule regular trimming or styling sessions to keep your hair tidy and reduce messiness.' },
-          { title: 'Step 3: Nourish & Protect', description: 'Apply a hair serum or oil to tame texture and add shine. Protect your hair from wind and environmental damage.' },
-        ],
+          { title: 'Gentle Cleansing', description: 'Use a sulfate-free shampoo' },
+          { title: 'Conditioning', description: 'Apply conditioner from mid-lengths to ends' },
+          { title: 'Styling', description: 'Apply heat protectant and style as desired' }
+        ]
       };
     }
 
@@ -353,28 +359,26 @@ export const requestAIRoutine = async () => {
     const { data: upserted, error: upsertError } = await supabase
       .from('ai_routines')
       .upsert({
-        user_id: user.id,
+        user_id: userId,
         analysis_id: analysis.id,
         routine: routineObj,
-        created_at: new Date().toISOString(),
-      }, { onConflict: ['user_id'] })
-      .select()
-      .single();
+        created_at: new Date().toISOString()
+      }, { onConflict: 'user_id' })
+      .select();
+
     console.log('DEBUG requestAIRoutine upserted:', upserted, 'error:', upsertError);
-    if (upsertError) {
-      return { data: null, error: upsertError };
-    }
-    return { data: upserted, error: null };
+
+    return { data: upserted?.[0] || null, error: upsertError };
   } catch (e) {
     console.log('Routine generation error:', e);
     // Use fallback routine if everything fails
     const fallbackRoutine = {
       title: 'Sample Personalized Routine',
       steps: [
-        { title: 'Step 1: Gentle Cleansing', description: 'Use a gentle shampoo and conditioner to maintain the health and integrity of your hair.' },
-        { title: 'Step 2: Regular Trimming', description: 'Schedule regular trimming or styling sessions to keep your hair tidy and reduce messiness.' },
-        { title: 'Step 3: Nourish & Protect', description: 'Apply a hair serum or oil to tame texture and add shine. Protect your hair from wind and environmental damage.' },
-      ],
+        { title: 'Gentle Cleansing', description: 'Use a sulfate-free shampoo' },
+        { title: 'Conditioning', description: 'Apply conditioner from mid-lengths to ends' },
+        { title: 'Styling', description: 'Apply heat protectant and style as desired' }
+      ]
     };
     return { data: { routine: fallbackRoutine }, error: null };
   }
@@ -385,53 +389,357 @@ import { callTogetherAIForRoutine } from './AIService';
 const generateRoutineFromAI = async (analysisData) => {
   try {
     return await callTogetherAIForRoutine(analysisData);
-  } catch (e) {
+  } catch (error) {
+    console.error('Error generating routine from AI:', error);
     return null;
   }
 };
 
-// --- Routine Progress Functions ---
+// --- Enhanced Routine Functions ---
 
-export const getRoutineProgress = async (routineId) => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return {};
-  const { data, error } = await supabase
-    .from('routine_progress')
-    .select('step_index, checked')
-    .eq('user_id', user.id)
-    .eq('routine_id', routineId);
-  if (error || !data) return {};
-  // Return as { [stepIndex]: checked }
-  return data.reduce((acc, row) => {
-    acc[row.step_index] = row.checked;
-    return acc;
-  }, {});
+// Get all user routines with progress
+export const getUserRoutines = async () => {
+  try {
+    const userResult = await supabase.auth.getUser();
+    if (!userResult.data.user) {
+      return { data: null, error: { message: 'User not authenticated' } };
+    }
+    const userId = userResult.data.user.id;
+
+    // Try to use the database function first
+    const { data, error } = await supabase
+      .rpc('get_user_routines_with_progress', { user_uuid: userId });
+
+    if (error) {
+      console.error('getUserRoutines database function error:', error);
+      
+      // Fallback: Get routines without progress
+      const { data: routines, error: routinesError } = await supabase
+        .from('user_routines')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (routinesError) {
+        console.error('getUserRoutines fallback error:', routinesError);
+        return { data: null, error: routinesError };
+      }
+
+      // Transform data to match expected format
+      const transformedRoutines = routines.map(routine => ({
+        routine_id: routine.id,
+        title: routine.title,
+        description: routine.description,
+        category: routine.category,
+        icon: routine.icon,
+        color: routine.color,
+        is_ai_generated: routine.is_ai_generated,
+        total_steps: 0,
+        completed_steps: 0,
+        progress_percentage: 0
+      }));
+
+      return { data: transformedRoutines, error: null };
+    }
+
+    return { data, error: null };
+  } catch (e) {
+    console.error('getUserRoutines error:', e);
+    return { data: null, error: { message: 'Failed to fetch routines' } };
+  }
 };
 
-export const setRoutineStepChecked = async (routineId, stepIndex, checked) => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
-  await supabase
-    .from('routine_progress')
-    .upsert({
-      user_id: user.id,
-      routine_id: routineId,
-      step_index: stepIndex,
-      checked,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: ['user_id', 'routine_id', 'step_index'] });
-};
-
-export const getHairAnalysisById = async (analysisId) => {
-  if (!analysisId) return { data: null, error: { message: "Analysis ID is required." } };
+// Get a specific routine with its steps
+export const getRoutineWithSteps = async (routineId) => {
   try {
     const { data, error } = await supabase
-      .from("hair_analysis_results")
-      .select("*")
-      .eq("id", analysisId)
-      .single();
-    return { data, error };
+      .rpc('get_routine_with_steps', { routine_uuid: routineId });
+
+    if (error) {
+      console.error('getRoutineWithSteps error:', error);
+      return { data: null, error };
+    }
+
+    return { data: data[0], error: null };
   } catch (e) {
-    return { data: null, error: { message: e.message || "Error fetching analysis by ID." } };
+    console.error('getRoutineWithSteps error:', e);
+    return { data: null, error: { message: 'Failed to fetch routine' } };
+  }
+};
+
+// Create a new routine
+export const createRoutine = async (routineData) => {
+  try {
+    const userResult = await supabase.auth.getUser();
+    if (!userResult.data.user) {
+      return { data: null, error: { message: 'User not authenticated' } };
+    }
+    const userId = userResult.data.user.id;
+
+    // Insert routine
+    const { data: routine, error: routineError } = await supabase
+      .from('user_routines')
+      .insert({
+        user_id: userId,
+        title: routineData.title,
+        description: routineData.description,
+        category: routineData.category,
+        icon: routineData.icon,
+        color: routineData.color,
+        is_ai_generated: routineData.is_ai_generated || false,
+        analysis_id: routineData.analysis_id
+      })
+      .select()
+      .single();
+
+    if (routineError) {
+      console.error('createRoutine routine error:', routineError);
+      return { data: null, error: routineError };
+    }
+
+    // Insert steps if provided
+    if (routineData.steps && routineData.steps.length > 0) {
+      const stepsData = routineData.steps.map((step, index) => ({
+        routine_id: routine.id,
+        step_order: index,
+        title: step.title,
+        description: step.description,
+        duration: step.duration
+      }));
+
+      const { error: stepsError } = await supabase
+        .from('routine_steps')
+        .insert(stepsData);
+
+      if (stepsError) {
+        console.error('createRoutine steps error:', stepsError);
+        // Delete the routine if steps insertion fails
+        await supabase.from('user_routines').delete().eq('id', routine.id);
+        return { data: null, error: stepsError };
+      }
+    }
+
+    return { data: routine, error: null };
+  } catch (e) {
+    console.error('createRoutine error:', e);
+    return { data: null, error: { message: 'Failed to create routine' } };
+  }
+};
+
+// Update a routine
+export const updateRoutine = async (routineId, routineData) => {
+  try {
+    const { data, error } = await supabase
+      .from('user_routines')
+      .update({
+        title: routineData.title,
+        description: routineData.description,
+        category: routineData.category,
+        icon: routineData.icon,
+        color: routineData.color
+      })
+      .eq('id', routineId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('updateRoutine error:', error);
+      return { data: null, error };
+    }
+
+    return { data, error: null };
+  } catch (e) {
+    console.error('updateRoutine error:', e);
+    return { data: null, error: { message: 'Failed to update routine' } };
+  }
+};
+
+// Delete a routine
+export const deleteRoutine = async (routineId) => {
+  try {
+    const { error } = await supabase
+      .from('user_routines')
+      .delete()
+      .eq('id', routineId);
+
+    if (error) {
+      console.error('deleteRoutine error:', error);
+      return { error };
+    }
+
+    return { error: null };
+  } catch (e) {
+    console.error('deleteRoutine error:', e);
+    return { error: { message: 'Failed to delete routine' } };
+  }
+};
+
+// Get routine categories
+export const getRoutineCategories = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('routine_categories')
+      .select('*')
+      .order('id');
+
+    if (error) {
+      console.error('getRoutineCategories error:', error);
+      return { data: null, error };
+    }
+
+    return { data, error: null };
+  } catch (e) {
+    console.error('getRoutineCategories error:', e);
+    return { data: null, error: { message: 'Failed to fetch categories' } };
+  }
+};
+
+// Save routine notification
+export const saveRoutineNotification = async (notificationData) => {
+  try {
+    const userResult = await supabase.auth.getUser();
+    if (!userResult.data.user) {
+      return { data: null, error: { message: 'User not authenticated' } };
+    }
+    const userId = userResult.data.user.id;
+
+    const { data, error } = await supabase
+      .from('routine_notifications')
+      .insert({
+        user_id: userId,
+        routine_id: notificationData.routine_id,
+        step_index: notificationData.step_index,
+        notification_id: notificationData.notification_id,
+        notification_type: notificationData.notification_type,
+        scheduled_time: notificationData.scheduled_time
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('saveRoutineNotification error:', error);
+      return { data: null, error };
+    }
+
+    return { data, error: null };
+  } catch (e) {
+    console.error('saveRoutineNotification error:', e);
+    return { data: null, error: { message: 'Failed to save notification' } };
+  }
+};
+
+// Get user's routine notifications
+export const getUserRoutineNotifications = async () => {
+  try {
+    const userResult = await supabase.auth.getUser();
+    if (!userResult.data.user) {
+      return { data: null, error: { message: 'User not authenticated' } };
+    }
+    const userId = userResult.data.user.id;
+
+    const { data, error } = await supabase
+      .from('routine_notifications')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .order('scheduled_time');
+
+    if (error) {
+      console.error('getUserRoutineNotifications error:', error);
+      return { data: null, error };
+    }
+
+    return { data, error: null };
+  } catch (e) {
+    console.error('getUserRoutineNotifications error:', e);
+    return { data: null, error: { message: 'Failed to fetch notifications' } };
+  }
+};
+
+// Deactivate routine notification
+export const deactivateRoutineNotification = async (notificationId) => {
+  try {
+    const { error } = await supabase
+      .from('routine_notifications')
+      .update({ is_active: false })
+      .eq('id', notificationId);
+
+    if (error) {
+      console.error('deactivateRoutineNotification error:', error);
+      return { error };
+    }
+
+    return { error: null };
+  } catch (e) {
+    console.error('deactivateRoutineNotification error:', e);
+    return { error: { message: 'Failed to deactivate notification' } };
+  }
+};
+
+// --- Enhanced Progress Functions ---
+
+// Update the existing setRoutineStepChecked function to work with new schema
+export const setRoutineStepChecked = async (routineId, stepIndex, checked) => {
+  try {
+    const userResult = await supabase.auth.getUser();
+    if (!userResult.data.user) {
+      return { data: null, error: { message: 'User not authenticated' } };
+    }
+    const userId = userResult.data.user.id;
+
+    const { data, error } = await supabase
+      .from('routine_progress')
+      .upsert({
+        user_id: userId,
+        routine_id: routineId,
+        step_index: stepIndex,
+        completed: checked,
+        completed_at: checked ? new Date().toISOString() : null
+      }, { onConflict: ['user_id', 'routine_id', 'step_index'] })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('setRoutineStepChecked error:', error);
+      return { data: null, error };
+    }
+
+    return { data, error: null };
+  } catch (e) {
+    console.error('setRoutineStepChecked error:', e);
+    return { data: null, error: { message: 'Failed to update progress' } };
+  }
+};
+
+// Get routine progress (updated for new schema)
+export const getRoutineProgress = async (routineId) => {
+  try {
+    const userResult = await supabase.auth.getUser();
+    if (!userResult.data.user) {
+      return { data: null, error: { message: 'User not authenticated' } };
+    }
+    const userId = userResult.data.user.id;
+
+    const { data, error } = await supabase
+      .from('routine_progress')
+      .select('step_index, completed')
+      .eq('user_id', userId)
+      .eq('routine_id', routineId);
+
+    if (error) {
+      console.error('getRoutineProgress error:', error);
+      return { data: null, error };
+    }
+
+    // Convert to object with step_index as key
+    const progressObj = {};
+    data.forEach(item => {
+      progressObj[item.step_index] = item.completed;
+    });
+
+    return { data: progressObj, error: null };
+  } catch (e) {
+    console.error('getRoutineProgress error:', e);
+    return { data: null, error: { message: 'Failed to fetch progress' } };
   }
 };

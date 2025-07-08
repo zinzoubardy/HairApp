@@ -15,15 +15,7 @@ const linking = {
       Splash: 'Splash',
       Auth: 'Auth',
       OnboardingCarousel: 'OnboardingCarousel',
-      MainTabs: {
-        screens: {
-          Dashboard: 'dashboard',
-          Routines: 'routines',
-          Analyse: 'analyse',
-          AIAdvisor: 'ai_advisor',
-          Profile: 'profile',
-        },
-      },
+      MainTabs: 'MainTabs',
       Upload: 'upload',
       AnalysisResult: 'analysis-result',
       PrivacyPolicy: 'privacy-policy',
@@ -34,7 +26,7 @@ const linking = {
 function Root() {
   const { user, loadingInitial } = useAuth() || { user: null, loadingInitial: false };
   const [languageReady, setLanguageReady] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     // Initialize i18n when the app starts
@@ -46,7 +38,7 @@ function Root() {
         setLanguageReady(true);
       } catch (error) {
         console.error('Error initializing i18n in App:', error);
-        setError(error.message);
+        setError(error instanceof Error ? error.message : 'Unknown error occurred');
         setLanguageReady(true); // Continue anyway
       }
     };

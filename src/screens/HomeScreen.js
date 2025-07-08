@@ -586,11 +586,9 @@ const HomeScreen = () => {
             {recipesLoading ? (
               <ActivityIndicator size="small" color={theme.colors.primary} style={{ marginVertical: 20 }} />
             ) : trendingRecipes.length > 0 ? (
-              <FlatList
-                data={trendingRecipes}
-                keyExtractor={item => item.id}
-                renderItem={({ item }) => (
-                  <TouchableOpacity style={styles.recipeItem} onPress={() => handleRecipePress(item)}>
+              <View>
+                {trendingRecipes.map((item) => (
+                  <TouchableOpacity key={item.id} style={styles.recipeItem} onPress={() => handleRecipePress(item)}>
                     <Image 
                       source={require('../../assets/splash.png')} 
                       style={styles.recipeImage} 
@@ -599,10 +597,8 @@ const HomeScreen = () => {
                       {item.title}
                     </Text>
                   </TouchableOpacity>
-                )}
-                horizontal={false}
-                scrollEnabled={false}
-              />
+                ))}
+              </View>
             ) : (
               <Text style={styles.noRecipesText}>{t('no_recipes')}</Text>
             )}
@@ -716,7 +712,7 @@ const HomeScreen = () => {
   }
 
   return (
-    <View style={{flex:1}}>
+    <View style={styles.root}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.centralLogoContainer}>
           <Image source={require('../../assets/splash.png')} style={styles.bigLogo} />
@@ -780,11 +776,9 @@ const HomeScreen = () => {
           {recipesLoading ? (
             <ActivityIndicator size="small" color={theme.colors.primary} style={{ marginVertical: 20 }} />
           ) : trendingRecipes.length > 0 ? (
-            <FlatList
-              data={trendingRecipes}
-              keyExtractor={item => item.id}
-              renderItem={({ item }) => (
-                <TouchableOpacity style={styles.recipeItem} onPress={() => handleRecipePress(item)}>
+            <View>
+              {trendingRecipes.map((item) => (
+                <TouchableOpacity key={item.id} style={styles.recipeItem} onPress={() => handleRecipePress(item)}>
                   <Image 
                     source={require('../../assets/splash.png')} 
                     style={styles.recipeImage} 
@@ -793,10 +787,8 @@ const HomeScreen = () => {
                     {item.title}
                   </Text>
                 </TouchableOpacity>
-              )}
-              horizontal={false}
-              scrollEnabled={false}
-            />
+              ))}
+            </View>
           ) : (
             <Text style={styles.noRecipesText}>{t('no_recipes')}</Text>
           )}
